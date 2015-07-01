@@ -1,0 +1,17 @@
+<<reconos_preproc>>
+
+<<generate for CLOCKS>>
+NET "reconos_clk_<<Id>>" TNM_NET = "NET_reconos_clk_<<Id>>";
+TIMESPEC TS_reconos_clk_<<Id>> = PERIOD "NET_reconos_clk_<<Id>>" <<ActFreqKHz>> kHz;
+<<end generate>>
+
+#TIMEGRP "reconos_clk" = "reconos_clk_<<SYSCLK>>";
+#TIMESPEC TS_01 = FROM "reconos_clk_<<SYSCLK>>" TO "reconos_clock_clk" TIG;
+#TIMESPEC TS_02 = FROM "reconos_clock_clk" TO "reconos_clk_<<SYSCLK>>" TIG;
+
+NET srv0_out_pin  LOC = Y11  | IOSTANDARD = LVCMOS33;
+NET srv1_out_pin  LOC = AA11 | IOSTANDARD = LVCMOS33;
+NET srv2_out_pin  LOC = Y10  | IOSTANDARD = LVCMOS33;
+NET srv3_out_pin  LOC = AA9  | IOSTANDARD = LVCMOS33;
+NET srv4_out_pin  LOC = W12  | IOSTANDARD = LVCMOS33;
+NET srv5_out_pin  LOC = W11  | IOSTANDARD = LVCMOS33;
