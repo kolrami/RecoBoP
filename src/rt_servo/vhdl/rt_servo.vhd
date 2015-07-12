@@ -94,7 +94,7 @@ begin
 		MEMIF_Hwt2Mem_WE
 	);
 
-	reconos_fsm: process (HWT_Clk,HWT_Rst,o_osif,o_memif) is
+	osfsm_proc: process (HWT_Clk,HWT_Rst,o_osif,o_memif) is
 		variable resume, done : boolean;
 	begin
 		if HWT_Rst = '1' then
@@ -138,7 +138,7 @@ begin
 
 			end case;
 		end if;
-	end process;
+	end process osfsm_proc;
 
 	srv_proc: process(HWT_Clk) is
 	begin
@@ -155,7 +155,7 @@ begin
 				srv5_c <= srv5_a * 100 + C_SRV5_CAL;
 			end if;
 		end if;
-	end process;
+	end process srv_proc;
 
 	srv0_p <= '1' when srv_count < srv0_c else '0';
 	srv1_p <= '1' when srv_count < srv1_c else '0';
@@ -174,6 +174,6 @@ begin
 			SRV4_Out <= srv4_p;
 			SRV5_Out <= srv5_p;
 		end if;
-	end process;
+	end process srv_out_proc;
 	
 end architecture;
