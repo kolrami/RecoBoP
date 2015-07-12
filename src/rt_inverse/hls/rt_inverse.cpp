@@ -51,17 +51,27 @@ ap_uint<32> inverse(ap_uint<32> data) {
 		ap_uint<32> data = ap_uint<32>((unsigned int)MBOX_GET(inverse_cmd));
 #endif
 
-		ap_uint<3> leg = data(2, 0);
+		ap_uint<10> cmd_x = data(31, 22);
+		ap_uint<10> cmd_y = data(21, 12);
+		ap_uint<9>  cmd_a = data(11, 3);
+		ap_uint<3>  cmd_l = data(2, 0);
 
-		ap_fixed<10,2> t_p2b_ra_x = data(31, 22);
-		ap_fixed<10,2> t_p2b_ra_y = data(21, 12);
-		ap_fixed<22,2> t_p2b_ra_sin = sin_lut[data(11, 3)];
-		ap_fixed<22,2> t_p2b_ra_cos = cos_lut[data(11, 3)];
+		ap_fixed<10,2> t_p2b_ra_x, t_p2b_ra_y;
+		// ugly workaround for bit selection
+		for (int i = 0; i < 10; i++) {
+			t_p2b_ra_x[i] = cmd_x[9 - i];
+			t_p2b_ra_y[i] = cmd_y[9 - i];
+		}
+
+		ap_fixed<22,2> t_p2b_ra_sin = sin_lut[cmd_a];
+		ap_fixed<22,2> t_p2b_ra_cos = cos_lut[cmd_a];
+
+		int leg = cmd_l;
+
 #ifndef __SYNTHESIS__
 		printf("x rot %f and y rot %f\n", t_p2b_ra_x.to_float(), t_p2b_ra_y.to_float());
 		printf("sine %f and cosine %f\n", t_p2b_ra_sin.to_float(), t_p2b_ra_cos.to_float());
 #endif
-
 
 		ap_fixed<22,10> p_b_j_x, p_b_j_y, p_b_j_z;
 		ap_fixed<22,10> p_s_j_x, p_s_j_y, p_s_j_z;
@@ -144,9 +154,9 @@ ap_uint<32> inverse(ap_uint<32> data) {
 #endif
 
 #ifdef __RECONOS__
-		MBOX_PUT(servo_cmd, (v_s_aj_l_mina, leg, ap_uint<18>(0)));
+		MBOX_PUT(servo_cmd, (v_s_aj_l_mina, cmd_l, ap_uint<18>(0)));
 #else
-		return (v_s_aj_l_mina, leg, ap_uint<18>(0));
+		return (v_s_aj_l_mina, cmd_l, ap_uint<18>(0));
 #endif
 
 #ifdef __RECONOS__
