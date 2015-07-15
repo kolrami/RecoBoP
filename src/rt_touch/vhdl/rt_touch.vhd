@@ -49,15 +49,16 @@ architecture implementation of rt_touch is
 	constant C_WAIT_COUNT : integer := 10;
 
 	type STATE_TYPE is (STATE_THREAD_INIT,
-	                    STATE_WAIT, STATE_START, STATE_READ,STATE_STORE);
+	                    STATE_WAIT, STATE_START_X, STATE_READ_X,
+	                    STATE_START_Y, STATE_READ_Y, STATE_STORE);
 	signal state : STATE_TYPE;
-
-	--subtype C_ANGLE_RANGE is natural range 31 downto 21;
 
 	signal sm_start, sm_ready   : std_logic;
 	signal sm_txdata, sm_rxdata : std_logic_vector(23 downto 0);
 	
 	signal wait_count :  unsigned(31 downto 0);
+
+	signal x_pos, y_pos : unsigned(11 downto 0);
 
 	signal ignore : std_logic_vector(31 downto 0);
 begin
@@ -107,19 +108,31 @@ begin
 					if wait_count = C_WAIT_COUNT then
 						wait_count <= (others => '0');
 
-						state <= STATE_START;
+						state <= STATE_START_X;
 					end if;
 
-				when STATE_START =>
-					state <= STATE_READ;
+				when STATE_START_X =>
+					state <= STATE_READ_X;
 
-				when STATE_READ =>
+				when STATE_READ_X =>
 					if sm_ready = '1' then
+						x_pos <= unsigned(sm_rxdata(15 downto 4));
+
+						state <= STATE_START_Y;
+					end if;
+
+				when STATE_START_Y =>
+					state <= STATE_READ_Y;
+
+				when STATE_READ_Y =>
+					if sm_ready = '1' then
+						y_pos <= unsigned(sm_rxdata(15 downto 4));
+
 						state <= STATE_STORE;
 					end if;
 
 				when STATE_STORE =>
-					MBOX_PUT(i_osif, o_osif, touch_pos, sm_rxdata & x"00", ignore, done);
+					MBOX_PUT(i_osif, o_osif, touch_pos, x"00" & std_logic_vector(x_pos) & std_logic_vector(y_pos), ignore, done);
 
 					if done then
 						state <= STATE_WAIT;
@@ -129,7 +142,23 @@ begin
 		end if;
 	end process osfsm_proc;
 
-	sm_start <= '1' when state = STATE_START else '0';
+	sm_start <= '1' when state = STATE_START_X else
+	            '1' when state = STATE_START_Y else
+	            '0';
+	-- Start A2 A1 A0 Mode SER PD1 PD0
+	--       0  0  1                    = y pos
+	--       1  0  1                    = x pos
+	--                0                 = 12bit conversion
+	--                1                 = 8bit conversion
+	--                     0            = internal reference
+	--                     1            = external reference
+	--                         0   0    = power down
+	--                         0   1    = power down without penirq
+	--                         1   0    = reserved
+	--                         1   1    = no power down
+	sm_txdata <= "11010000" & x"0000" when state = STATE_START_X else
+	             "10010000" & x"0000" when state = STATE_START_Y else
+	             (others => '0');
 
 	sm_inst : entity rt_touch_v1_00_a.spi_master
 		generic map (
