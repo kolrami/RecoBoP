@@ -53,8 +53,10 @@ architecture implementation of rt_vga is
 
 	signal h_count, v_count : unsigned(31 downto 0);
 
-	signal pos          : std_logic_vector(31 downto 0);
-	signal pos_x, pos_y : unsigned(15 downto 0);
+	signal pos          : std_logic_vector(31 downto 0) := (others => '0');
+	signal pos_x, pos_y : unsigned(11 downto 0);
+
+	signal red, green, blue : std_logic_vector(3 downto 0);
 
 	signal ignore : std_logic_vector(31 downto 0);
 begin
@@ -105,8 +107,8 @@ begin
 		end if;
 	end process osfsm_proc;
 
-	pos_x <= unsigned(pos(31 downto 16));
-	pos_y <= unsigned(pos(15 downto 0));
+	pos_x <= unsigned(pos(23 downto 12));
+	pos_y <= unsigned(pos(11 downto 0));
 
 	vc_inst : entity rt_vga_v1_00_a.vga_controller
 		generic map (
@@ -125,20 +127,26 @@ begin
 			G_V_POL     => '1'
 		)
 		port map (
+			VGA_Red    => VGA_Red,
+			VGA_Green  => VGA_Green,
+			VGA_Blue   => VGA_Blue,
 			VGA_HSync  => VGA_HSync,
 			VGA_VSync  => VGA_VSync,
 			VGA_HCount => h_count,
 			VGA_VCount => v_count,
 
-			VC_Clk => HWT_Clk
+			VC_Clk   => HWT_Clk,
+			VC_Red   => red,
+			VC_Green => green,
+			VC_Blue  => blue
 		);
 
-	VGA_Red   <= (others => '0') when h_count = pos_x and v_count = pos_y else
-	             (others => '1');
-	VGA_Green <= (others => '0') when h_count = pos_x and v_count = pos_y else
-	             (others => '1');
-	VGA_Blue  <= (others => '0') when h_count = pos_x and v_count = pos_y else
-	             (others => '1');
+	red   <= (others => '0') when h_count = pos_x and v_count = pos_y else
+	         (others => '1');
+	green <= (others => '0') when h_count = pos_x and v_count = pos_y else
+	         (others => '1');
+	blue  <= (others => '0') when h_count = pos_x and v_count = pos_y else
+	         (others => '0');
 
 end architecture;
 

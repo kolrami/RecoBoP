@@ -19,12 +19,18 @@ entity vga_controller is
 		G_V_POL     : std_logic := '1'
 	);
 	port (
+		VGA_Red    : out std_logic_vector(3 downto 0);
+		VGA_Green  : out std_logic_vector(3 downto 0);
+		VGA_Blue   : out std_logic_vector(3 downto 0);
 		VGA_HSync  : out std_logic;
 		VGA_VSync  : out std_logic;
 		VGA_HCount : out unsigned(31 downto 0);
 		VGA_VCount : out unsigned(31 downto 0);
 
-		VC_Clk : in  std_logic
+		VC_Clk   : in  std_logic;
+		VC_Red   : in  std_logic_vector(3 downto 0);
+		VC_Green : in  std_logic_vector(3 downto 0);
+		VC_Blue  : in  std_logic_vector(3 downto 0)
 	);
 end entity vga_controller;
 
@@ -64,8 +70,8 @@ begin
 		end if;
 	end process ctrl_proc;
 
-	VGA_HCount <= v_count;
-	VGA_VCount <= h_count;
+	VGA_HCount <= h_count;
+	VGA_VCount <= v_count;
 
 	VGA_HSync <= not G_H_POL when h_count < G_H_DISPLAY + G_H_FRONT else
 	                 G_H_POL when h_count < G_H_DISPLAY + G_H_FRONT + G_H_SYNC else
@@ -76,5 +82,9 @@ begin
 	                 G_H_POL when v_count < G_V_DISPLAY + G_V_FRONT + G_V_SYNC else
 	             not G_H_POL when v_count < G_V_DISPLAY + G_V_FRONT + G_V_SYNC + G_V_BACK else
 	             not G_H_POL;
+
+	VGA_Red    <= VC_Red when h_count < G_H_DISPLAY and v_count < G_V_DISPLAY else (others => '0');
+	VGA_Green  <= VC_Green when h_count < G_H_DISPLAY and v_count < G_V_DISPLAY else (others => '0');
+	VGA_Blue   <= VC_Blue when h_count < G_H_DISPLAY and v_count < G_V_DISPLAY else (others => '0');
 
 end architecture implementation;

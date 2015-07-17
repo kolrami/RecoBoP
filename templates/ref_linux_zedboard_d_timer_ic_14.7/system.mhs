@@ -23,12 +23,19 @@ PORT processing_system7_0_DDR_DQS = processing_system7_0_DDR_DQS, DIR = IO, VEC 
 PORT processing_system7_0_DDR_DQS_n = processing_system7_0_DDR_DQS_n, DIR = IO, VEC = [3:0]
 PORT processing_system7_0_DDR_VRN = processing_system7_0_DDR_VRN, DIR = IO
 PORT processing_system7_0_DDR_VRP = processing_system7_0_DDR_VRP, DIR = IO
+
 PORT srv0_out_pin = slot_0_SRV0_Out, DIR = O
 PORT srv1_out_pin = slot_0_SRV1_Out, DIR = O
 PORT srv2_out_pin = slot_0_SRV2_Out, DIR = O
 PORT srv3_out_pin = slot_0_SRV3_Out, DIR = O
 PORT srv4_out_pin = slot_0_SRV4_Out, DIR = O
 PORT srv5_out_pin = slot_0_SRV5_Out, DIR = O
+
+PORT vga_red_pin = slot_2_VGA_Red, DIR = O, VEC = [3:0]
+PORT vga_green_pin = slot_2_VGA_Green, DIR = O, VEC = [3:0]
+PORT vga_blue_pin = slot_2_VGA_Blue, DIR = O, VEC = [3:0]
+PORT vga_hsync_pin = slot_2_VGA_HSync, DIR = O
+PORT vga_vsync_pin = slot_2_VGA_VSync, DIR = O
 
 BEGIN axi_interconnect
  PARAMETER INSTANCE = axi_hwt

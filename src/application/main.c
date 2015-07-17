@@ -47,14 +47,23 @@ int main(int argc, char **argv) {
 	reconos_app_init();
 
 	reconos_thread_create_hwt_servo();
+	//reconos_thread_create_hwt_touch();
+	reconos_thread_create_hwt_vga();
 	reconos_thread_create_hwt_inverse();
 
+	printf("Resetting platform ...\n");
 	for (i = 0; i < 6; i++)
 		mbox_put(inverse_cmd_ptr, 0 | fixed(0) << 22 | fixed(0) << 12 | 0 << 3 | i << 0);
 	sleep(1);
 
+	printf("Outputting VGA ...\n");
+	for (i = 0; i < 800; i++) {
+		mbox_put(touch_pos_ptr, 0 | i << 12 | 0 << 0);
+		usleep(10000);
+	}
 
-#if 1
+
+#if 0
 	while(1) {
 		for (a = 0; a < MAX_ANGLE; a++) {
 			for (i = 0; i < 6; i++)
