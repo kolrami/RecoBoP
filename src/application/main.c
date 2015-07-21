@@ -62,6 +62,8 @@ int main(int argc, char **argv) {
 		usleep(10000);
 	}
 
+	mbox_put(touch_pos_ptr, 0 | 400 << 12 | 300 << 0);
+
 
 #if 0
 	while(1) {

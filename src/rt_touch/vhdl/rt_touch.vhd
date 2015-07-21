@@ -116,7 +116,7 @@ begin
 
 				when STATE_READ_X =>
 					if sm_ready = '1' then
-						x_pos <= unsigned(sm_rxdata(15 downto 4));
+						x_pos <= unsigned(sm_rxdata(14 downto 3));
 
 						state <= STATE_START_Y;
 					end if;
@@ -126,7 +126,7 @@ begin
 
 				when STATE_READ_Y =>
 					if sm_ready = '1' then
-						y_pos <= unsigned(sm_rxdata(15 downto 4));
+						y_pos <= unsigned(sm_rxdata(14 downto 3));
 
 						state <= STATE_STORE;
 					end if;
