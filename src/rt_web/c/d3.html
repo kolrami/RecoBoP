@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+
+<style type="text/css">
+body {font-family: "DejaVu Sans Mono"; }
+h1 {font-weight: 100; }
+.graph path {fill: none; stroke: blue; stroke-width:1px; }
+.xaxis path {stroke: black; stroke-width: 1px; fill: none; }
+.yaxis path {stroke: black; stroke-width: 1px; fill: none; }
+.tick text {font-size: 11px; }
+</style>
+</head>
+
+<body>
+<h1>RecoBoP</h1>
+<svg id="saw_vsense" />
+
+<script type="text/javascript">
+function getTime() {
+	return new Date().getTime();
+}
+
+var time_start = getTime();
+</script>
+
+<script type="text/javascript">
+var saw_vsense_data_max = 20;
+var saw_vsense_interval = 500;
+var saw_vsense_data = [];
+
+var saw_vsense_xaxis_scale, saw_vsense_yaxis_scale;
+
+var saw_vsense_width = 500;
+var saw_vsense_height = 200;
+var saw_vsense_padding = 40;
+
+function saw_vsense_update() {
+	var request = new XMLHttpRequest();
+	request.open("GET", "/saw_vsense", false);
+	request.send(null);
+	if (request.status === 200) {
+		var saw_vsense = parseInt(request.responseText);
+	} else {
+		return;
+	}
+
+	if (saw_vsense_data.length === saw_vsense_data_max) {
+		saw_vsense_data.pop();
+	}
+
+	saw_vsense_data.unshift({ "timestamp": getTime() - time_start, "saw_vsense": saw_vsense});
+
+
+	var saw_vsense_line = d3.svg.line();
+	saw_vsense_line.x(function(d, i) { return saw_vsense_xaxis_scale(i * saw_vsense_interval); });
+	saw_vsense_line.y(function(d, i) { return saw_vsense_yaxis_scale(d.saw_vsense); });
+
+	d3.select("#saw_vsense").select(".graph").select("path").datum(saw_vsense_data);
+	d3.select("#saw_vsense").select(".graph").select("path").attr("d", saw_vsense_line);
+}
+
+function saw_vsense_init() {
+	d3.select("#saw_vsense").attr("width", saw_vsense_width).attr("height", saw_vsense_height);
+	d3.select("#saw_vsense").append("g").attr("class", "graph").attr("transform", "translate(" + saw_vsense_padding + ", " + saw_vsense_padding + ")").append("path");
+	d3.select("#saw_vsense").append("g").attr("class", "xaxis");
+	d3.select("#saw_vsense").append("g").attr("class", "yaxis");
+
+	saw_vsense_xaxis_scale = d3.scale.linear();
+	saw_vsense_xaxis_scale.domain([0, (saw_vsense_data_max - 1) * saw_vsense_interval]);
+	saw_vsense_xaxis_scale.range([0, saw_vsense_width - 2 * saw_vsense_padding]);
+
+	saw_vsense_yaxis_scale = d3.scale.linear();
+	saw_vsense_yaxis_scale.domain([500, 0]);
+	saw_vsense_yaxis_scale.range([0, saw_vsense_height - 2 * saw_vsense_padding]);
+
+	var xaxis = d3.svg.axis().orient("bottom").scale(saw_vsense_xaxis_scale);
+	d3.select("#saw_vsense").select(".xaxis").call(xaxis);
+	d3.select("#saw_vsense").select(".xaxis").attr("transform", "translate(" + saw_vsense_padding + "," + (saw_vsense_height - saw_vsense_padding) + ")");
+	var yaxis = d3.svg.axis().orient("left").scale(saw_vsense_yaxis_scale);
+	d3.select("#saw_vsense").select(".yaxis").call(yaxis);
+	d3.select("#saw_vsense").select(".yaxis").attr("transform", "translate(" + saw_vsense_padding + "," + (saw_vsense_padding) + ")");
+}
+</script>
+
+<script type="text/javascript">
+saw_vsense_init();
+window.setInterval(saw_vsense_update, saw_vsense_interval);
+</script>
+</body>

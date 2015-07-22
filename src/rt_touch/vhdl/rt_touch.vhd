@@ -46,12 +46,14 @@ architecture implementation of rt_touch is
 	signal i_memif : i_memif_t;
 	signal o_memif : o_memif_t;
 
-	constant C_WAIT_COUNT : integer := 10;
+	constant C_WAIT_COUNT : integer := 10000;
 
 	type STATE_TYPE is (STATE_THREAD_INIT,
-	                    STATE_WAIT, STATE_START_X, STATE_READ_X,
-	                    STATE_START_Y, STATE_READ_Y, STATE_STORE);
+	                    STATE_WAIT, STATE_CTRL, STATE_START_X, STATE_READ_X,
+	                    STATE_START_Y, STATE_READ_Y, STATE_STORE, STATE_SAW);
 	signal state : STATE_TYPE;
+
+	signal rb_info : unsigned(31 downto 0);
 
 	signal sm_start, sm_ready   : std_logic;
 	signal sm_txdata, sm_rxdata : std_logic_vector(23 downto 0);
@@ -59,8 +61,11 @@ architecture implementation of rt_touch is
 	signal wait_count :  unsigned(31 downto 0);
 
 	signal x_pos, y_pos : unsigned(11 downto 0);
+	signal pos          : std_logic_vector(31 downto 0);
 
-	signal ignore : std_logic_vector(31 downto 0);
+	signal ctrl_wait : unsigned(31 downto 0);
+
+	signal ignore, ret : std_logic_vector(31 downto 0);
 begin
 	osif_setup (
 		i_osif,
@@ -84,6 +89,8 @@ begin
 		MEMIF_Hwt2Mem_WE
 	);
 
+	pos <= x"00" & std_logic_vector(x_pos) & std_logic_vector(y_pos);
+
 	osfsm_proc: process (HWT_Clk,HWT_Rst,o_osif,o_memif) is
 		variable resume, done : boolean;
 	begin
@@ -95,19 +102,33 @@ begin
 
 			state <= STATE_THREAD_INIT;
 		elsif rising_edge(HWT_Clk) then
+			wait_count <= wait_count + 1;
+
 			case state is
 				when STATE_THREAD_INIT =>
 					THREAD_INIT(i_osif, o_osif, resume, done);
 					if done then
+						state <= STATE_INIT_DATA;
+					end if;
+
+				when STATE_INIT_DATA =>
+					GET_INIT_DATA(i_osif, o_osif, ret, done);
+					if done then
+						rb_info <= unsigned(ret);
+
+						state <= STATE_CTRL;
+					end if;
+
+				when STATE_CTRL =>
+					MEMIF_READ_WORD(i_memif, o_memif, std_logic_vector(rb_info + 12), ret, done);
+					if done then
+						ctrl_wait <= unsigned(ret);
+
 						state <= STATE_WAIT;
 					end if;
 
 				when STATE_WAIT =>
-					wait_count <= wait_count + 1;
-
-					if wait_count = C_WAIT_COUNT then
-						wait_count <= (others => '0');
-
+					if wait_count = ctrl_wait then
 						state <= STATE_START_X;
 					end if;
 
@@ -132,10 +153,18 @@ begin
 					end if;
 
 				when STATE_STORE =>
-					MBOX_PUT(i_osif, o_osif, touch_pos, x"00" & std_logic_vector(x_pos) & std_logic_vector(y_pos), ignore, done);
+					MBOX_PUT(i_osif, o_osif, touch_pos, pos, ignore, done);
 
 					if done then
-						state <= STATE_WAIT;
+						wait_count <= (others => '0');
+
+						state <= STATE_SAW;
+					end if;
+
+				when STATE_SAW =>
+					MEMIF_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 8), pos, done);
+					if done then
+						state <= STATE_CTRL;
 					end if;
 
 			end case;

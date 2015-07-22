@@ -1,3 +1,5 @@
+#include "recobop.h"
+
 #include "reconos.h"
 #include "reconos_app.h"
 #include "mbox.h"
@@ -10,6 +12,8 @@
 
 #define MAX_ANGLE 60
 #define SLEEP 20000
+
+volatile struct recobop_info rb_info;
 
 inline double radians(double deg) {
 	return deg * (M_PI / 180.0);
@@ -46,10 +50,14 @@ int main(int argc, char **argv) {
 	reconos_init();
 	reconos_app_init();
 
-	reconos_thread_create_hwt_servo();
-	//reconos_thread_create_hwt_touch();
-	reconos_thread_create_hwt_vga();
-	reconos_thread_create_hwt_inverse();
+	printf("Initializing Info\n");
+	rb_info.ctrl_touch_wait = 10000;
+
+	reconos_thread_createi_hwt_servo((void *)&rb_info);
+	//reconos_thread_createi_hwt_touch((void *)&rb_info);
+	reconos_thread_createi_hwt_vga((void *)&rb_info);
+	reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	reconos_thread_createi_swt_web((void *)&rb_info);
 
 	printf("Resetting platform ...\n");
 	for (i = 0; i < 6; i++)

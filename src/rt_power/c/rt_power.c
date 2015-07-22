@@ -1,3 +1,5 @@
+#include "recobop.h"
+
 #include "reconos_thread.h"
 #include "reconos_calls.h"
 #include "utils.h"
@@ -10,13 +12,14 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
-void *rt_power(void * data) {
-	int i2c;
-	char buf[10];
+THREAD_ENTRY() {
+	struct recobop_info *rb_info;
 
+	int i2c;
 	int vsense, vin;
 
 	THREAD_INIT();
+	rb_info = (struct recobop_info *)GET_INIT_DATA();
 
 	i2c = open("/dev/i2c-0", O_RDWR);
 	if (i2c < 0) {
@@ -38,6 +41,8 @@ void *rt_power(void * data) {
 		vin = i2c_smbus_read_word_data(i2c, 0x02) >> 4;
 
 		debug("Voltage: V_in = %d, V_sense = %d", vin, vsense);
+		rb_info->saw_vsense = vsense;
+		rb_info->saw_power = vsense / 100;
 
 		usleep(10000);
 	}
