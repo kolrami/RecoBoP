@@ -43,6 +43,7 @@ inline uint32_t fixed(double d) {
 
 int main(int argc, char **argv) {
 	int a, i;
+	int x, y;
 	uint32_t s, c;
 	char line[128];
 	printf("Hello World\n");
@@ -55,22 +56,32 @@ int main(int argc, char **argv) {
 
 	reconos_thread_createi_hwt_servo((void *)&rb_info);
 	//reconos_thread_createi_hwt_touch((void *)&rb_info);
-	reconos_thread_createi_hwt_vga((void *)&rb_info);
+	//reconos_thread_createi_hwt_vga((void *)&rb_info);
+	reconos_thread_createi_hwt_control((void *)&rb_info);
 	reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	reconos_thread_createi_swt_web((void *)&rb_info);
+	//reconos_thread_createi_swt_web((void *)&rb_info);
 
 	printf("Resetting platform ...\n");
 	for (i = 0; i < 6; i++)
 		mbox_put(inverse_cmd_ptr, 0 | fixed(0) << 22 | fixed(0) << 12 | 0 << 3 | i << 0);
 	sleep(1);
 
-	printf("Outputting VGA ...\n");
-	for (i = 0; i < 800; i++) {
-		mbox_put(touch_pos_ptr, 0 | i << 12 | 0 << 0);
+	printf("Testing control algorithm ...\n");
+	#if 1
+	for (a = 0; a < 10000000; a+=1) {
+		x = cos(a * M_PI / 180) * 500;
+		y = sin(a * M_PI / 180) * 500;
+		printf("%d,%d\n", x, y);
+		mbox_put(touch_pos_ptr, 0 | (x & 0xfff) << 12 | (y & 0xfff) << 0);
+		mbox_put(touch_pos_ptr, 10);
 		usleep(10000);
 	}
-
-	mbox_put(touch_pos_ptr, 0 | 400 << 12 | 300 << 0);
+	#endif
+	//mbox_put(touch_pos_ptr, 0 | (-2000 & 0xfff) << 12 | (-1 & 0xfff) << 0);
+	//mbox_put(touch_pos_ptr, 10);
+	//for (i = 200; i < 200; i++) {;
+	//}
+	sleep(1);
 
 
 #if 0

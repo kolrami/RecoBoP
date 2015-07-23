@@ -48,7 +48,7 @@ ap_uint<32> inverse(ap_uint<32> data) {
 #endif
 
 #ifdef __RECONOS__
-		ap_uint<32> data = ap_uint<32>((unsigned int)MBOX_GET(inverse_cmd));
+		ap_uint<32> data = MBOX_GET(inverse_cmd);
 #endif
 
 		ap_uint<10> cmd_x = data(31, 22);
@@ -59,8 +59,8 @@ ap_uint<32> inverse(ap_uint<32> data) {
 		ap_fixed<10,2> t_p2b_ra_x, t_p2b_ra_y;
 		// ugly workaround for bit selection
 		for (int i = 0; i < 10; i++) {
-			t_p2b_ra_x[i] = cmd_x[9 - i];
-			t_p2b_ra_y[i] = cmd_y[9 - i];
+			t_p2b_ra_x[i] = cmd_x[i];
+			t_p2b_ra_y[i] = cmd_y[i];
 		}
 
 		ap_fixed<22,2> t_p2b_ra_sin = sin_lut[cmd_a];
