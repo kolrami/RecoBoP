@@ -48,7 +48,7 @@ architecture implementation of rt_touch is
 
 	constant C_WAIT_COUNT : integer := 10000;
 
-	type STATE_TYPE is (STATE_THREAD_INIT,
+	type STATE_TYPE is (STATE_THREAD_INIT, STATE_INIT_DATA,
 	                    STATE_WAIT, STATE_CTRL, STATE_START_X, STATE_READ_X,
 	                    STATE_START_Y, STATE_READ_Y, STATE_STORE, STATE_SAW);
 	signal state : STATE_TYPE;
@@ -120,7 +120,7 @@ begin
 					end if;
 
 				when STATE_CTRL =>
-					MEMIF_READ_WORD(i_memif, o_memif, std_logic_vector(rb_info + 12), ret, done);
+					MEM_READ_WORD(i_memif, o_memif, std_logic_vector(rb_info + 16), ret, done);
 					if done then
 						ctrl_wait <= unsigned(ret);
 
@@ -162,7 +162,7 @@ begin
 					end if;
 
 				when STATE_SAW =>
-					MEMIF_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 8), pos, done);
+					MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 12), pos, done);
 					if done then
 						state <= STATE_CTRL;
 					end if;

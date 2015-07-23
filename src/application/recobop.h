@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 struct recobop_info {
+	uint32_t saw_vin;
 	uint32_t saw_vsense;
 	uint32_t saw_power;
 	uint32_t saw_pos;
