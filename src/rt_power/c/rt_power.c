@@ -41,6 +41,7 @@ THREAD_ENTRY() {
 		vin = i2c_smbus_read_word_data(i2c, 0x02) >> 4;
 
 		debug("Voltage: V_in = %d, V_sense = %d", vin, vsense);
+		rb_info->saw_vin = vin;
 		rb_info->saw_vsense = vsense;
 		rb_info->saw_power = vsense / 100;
 
