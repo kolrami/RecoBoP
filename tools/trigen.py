@@ -26,6 +26,7 @@ if args.format == "c":
 	out += "#define TRIG_ADDR " + str(args.address) + "\n"
 	out += "#define TRIG_MIN_ANGLE_DEG 0\n"
 	out += "#define TRIG_MAX_ANGLE_DEG " + str(args.maxangle) + "\n"
+	out += "#define TRIG_STEP " + str(step)  +"\n"
 	#out += "#define TRIG_ADDR_PER_ANGLE_DEG " + "{:.8f}".format((addr - 1) / args.maxangle) + "\n"
 	#out += "#define TRIG_SIN_DEG(x) (sin[(unsigned int)(TRIG_ADDR_PER_ANGLE_DEG * (x))])\n"
 	#out += "#define TRIG_COS_DEG(x) (cos[(unsigned int)(TRIG_ADDR_PER_ANGLE_DEG * (x))])\n"
