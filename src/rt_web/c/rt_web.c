@@ -67,11 +67,16 @@ THREAD_ENTRY() {
 		header_count = recv(client_sock, header, HEADER_COUNT_MAX, 0);
 		header[header_count] = '\0';
 
+		send(client_sock, "HTTP/1.1 200 OK\n\n", 17, 0);
 		if (!strncmp(header, "GET / ", 6)) {
-			send(client_sock, "HTTP/1.1 200 OK\n\n", 17, 0);
 			send(client_sock, index, index_count, 0);
-		} else if (!strncmp(header, "GET /saw_vsense ", 10)) {
-			send(client_sock, "HTTP/1.1 200 OK\n\n", 17, 0);
+		} else if (!strncmp(header, "GET /saw_pos/x ", 15)) {
+			buf_count = snprintf(buf, 1024, "%d", rand() % 4096 - 2048);
+			send(client_sock, buf, buf_count, 0);
+		} else if (!strncmp(header, "GET /saw_pos/y ", 15)) {
+			buf_count = snprintf(buf, 1024, "%d", rand() % 4096 - 2048);
+			send(client_sock, buf, buf_count, 0);
+		} else if (!strncmp(header, "GET /saw_vsense ", 16)) {
 			buf_count = snprintf(buf, 1024, "%d", rand() % 256);
 			send(client_sock, buf, buf_count, 0);
 		}
