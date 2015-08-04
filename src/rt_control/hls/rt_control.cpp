@@ -14,10 +14,10 @@ THREAD_ENTRY() {
 	ap_uint<32> control(ap_uint<32> pos, ap_uint<32> wait) {
 #endif
 
-		ap_ufixed<22,12> error, error_last, error_diff, error_sum = 0;
+	ap_ufixed<22,12> error, error_last, error_diff, error_sum = 0;
 
 #ifdef __RECONOS__
-		while (1) {
+	while (1) {
 #endif
 
 #ifdef __RECONOS__
