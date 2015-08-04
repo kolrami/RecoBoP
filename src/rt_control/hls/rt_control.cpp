@@ -11,7 +11,7 @@
 THREAD_ENTRY() {
 	THREAD_INIT();
 #else
-	ap_uint<32> control(ap_uint<32> pos, ap_uint<32> delta) {
+	ap_uint<32> control(ap_uint<32> pos, ap_uint<32> wait) {
 #endif
 
 		ap_ufixed<22,12> error, error_last, error_diff, error_sum = 0;
@@ -22,7 +22,7 @@ THREAD_ENTRY() {
 
 #ifdef __RECONOS__
 		ap_uint<32> pos = MBOX_GET(touch_pos);
-		ap_uint<32> delta = MBOX_GET(touch_pos);
+		ap_uint<32> wait = MBOX_GET(touch_pos);
 #endif
 
 		ap_uint<12> pos_x = pos(23, 12);
@@ -33,6 +33,8 @@ THREAD_ENTRY() {
 			p_p_b_x[i] = pos_x[i];
 			p_p_b_y[i] = pos_y[i];
 		}
+
+		ap_ufixed<22,12> delta = wait / 100000;
 
 #ifndef __SYNTHESIS__
 		printf("position of ball on plate %d %d\n", p_p_b_x.to_int(), p_p_b_y.to_int());

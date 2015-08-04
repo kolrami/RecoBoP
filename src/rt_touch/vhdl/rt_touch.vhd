@@ -49,8 +49,11 @@ architecture implementation of rt_touch is
 	constant C_WAIT_COUNT : integer := 10000;
 
 	type STATE_TYPE is (STATE_THREAD_INIT, STATE_INIT_DATA,
-	                    STATE_WAIT, STATE_CTRL, STATE_START_X, STATE_READ_X,
-	                    STATE_START_Y, STATE_READ_Y, STATE_STORE, STATE_SAW);
+	                    STATE_WAIT, STATE_CTRL,
+	                    STATE_START_X, STATE_READ_X,
+	                    STATE_START_Y, STATE_READ_Y,
+	                    STATE_STORE_POS, STATE_STORE_DELTA,
+	                    STATE_SAW);
 	signal state : STATE_TYPE;
 
 	signal rb_info : unsigned(31 downto 0);
@@ -60,8 +63,9 @@ architecture implementation of rt_touch is
 	
 	signal wait_count :  unsigned(31 downto 0);
 
-	signal x_pos, y_pos : unsigned(11 downto 0);
-	signal pos          : std_logic_vector(31 downto 0);
+	signal x_pos, y_pos     : signed(12 downto 0);
+	signal x_pos_s, y_pos_s : signed(12 downto 0);
+	signal pos              : std_logic_vector(31 downto 0);
 
 	signal ctrl_wait : unsigned(31 downto 0);
 
@@ -89,7 +93,9 @@ begin
 		MEMIF_Hwt2Mem_WE
 	);
 
-	pos <= x"00" & std_logic_vector(x_pos) & std_logic_vector(y_pos);
+	x_pos_s <= x_pos - 2048;
+	y_pos_s <= y_pos - 2048;
+	pos <= x"00" & std_logic_vector(x_pos_s(11 downto 0)) & std_logic_vector(y_pos_s(11 downto 0));
 
 	osfsm_proc: process (HWT_Clk,HWT_Rst,o_osif,o_memif) is
 		variable resume, done : boolean;
@@ -137,7 +143,7 @@ begin
 
 				when STATE_READ_X =>
 					if sm_ready = '1' then
-						x_pos <= unsigned(sm_rxdata(14 downto 3));
+						x_pos <= signed("0" & sm_rxdata(14 downto 3));
 
 						state <= STATE_START_Y;
 					end if;
@@ -147,17 +153,24 @@ begin
 
 				when STATE_READ_Y =>
 					if sm_ready = '1' then
-						y_pos <= unsigned(sm_rxdata(14 downto 3));
+						y_pos <= signed("0" & sm_rxdata(14 downto 3));
 
-						state <= STATE_STORE;
+						wait_count <= (others => '0');
+
+						state <= STATE_STORE_POS;
 					end if;
 
-				when STATE_STORE =>
+				when STATE_STORE_POS =>
 					MBOX_PUT(i_osif, o_osif, touch_pos, pos, ignore, done);
 
 					if done then
-						wait_count <= (others => '0');
+						state <= STATE_STORE_DELTA;
+					end if;
 
+				when STATE_STORE_DELTA =>
+					MBOX_PUT(i_osif, o_osif, touch_pos, std_logic_vector(ctrl_wait), ignore, done);
+
+					if done then
 						state <= STATE_SAW;
 					end if;
 
