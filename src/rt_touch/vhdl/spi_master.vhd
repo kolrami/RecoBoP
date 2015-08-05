@@ -59,14 +59,14 @@ begin
 						if sclk = '1' then
 							txdata <= txdata(G_DATA_LEN - 2 downto 0) & '0';
 						else
-							rxdata <= rxdata(G_DATA_LEN - 2 downto 0) & SPI_MISO;
-
-							data_count <= data_count + 1;
-
 							if data_count = G_DATA_LEN then
 								sclk <= '0';
 
 								state <= STATE_WAIT;
+							else
+								rxdata <= rxdata(G_DATA_LEN - 2 downto 0) & SPI_MISO;
+
+								data_count <= data_count + 1;
 							end if;
 						end if;
 					end if;

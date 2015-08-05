@@ -36,7 +36,9 @@ entity rt_touch is
 		TC_SCLK  : out std_logic;
 		TC_MOSI  : out std_logic;
 		TC_MISO  : in  std_logic := '0';
-		TC_SSn   : out std_logic
+		TC_SSn   : out std_logic;
+
+		DEBUG : out std_logic_vector(51 downto 0)
 	);
 end entity rt_touch;
 
@@ -63,14 +65,39 @@ architecture implementation of rt_touch is
 	
 	signal wait_count :  unsigned(31 downto 0);
 
-	signal x_pos, y_pos     : signed(12 downto 0);
+	signal x_pos, y_pos     : signed(12 downto 0) := (others => '0');
 	signal x_pos_s, y_pos_s : signed(12 downto 0);
 	signal pos              : std_logic_vector(31 downto 0);
 
 	signal ctrl_wait : unsigned(31 downto 0);
 
 	signal ignore, ret : std_logic_vector(31 downto 0);
+
+	signal sclk, mosi, miso, ssn : std_logic;
 begin
+	DEBUG(0) <= '1' when state = STATE_THREAD_INIT else '0';
+	DEBUG(1) <= '1' when state = STATE_INIT_DATA else '0';
+	DEBUG(2) <= '1' when state = STATE_WAIT else '0';
+	DEBUG(3) <= '1' when state = STATE_CTRL else '0';
+	DEBUG(4) <= '1' when state = STATE_START_X else '0';
+	DEBUG(5) <= '1' when state = STATE_READ_X else '0';
+	DEBUG(6) <= '1' when state = STATE_START_Y else '0';
+	DEBUG(7) <= '1' when state = STATE_READ_Y else '0';
+	DEBUG(8) <= '1' when state = STATE_STORE_POS else '0';
+	DEBUG(9) <= '1' when state = STATE_STORE_DELTA else '0';
+	DEBUG(10) <= '1' when state = STATE_SAW else '0';
+	DEBUG(11) <= sclk;
+	DEBUG(12) <= mosi;
+	DEBUG(13) <= miso;
+	DEBUG(14) <= ssn;
+	DEBUG(27 downto 15) <= std_logic_vector(x_pos);
+	DEBUG(51 downto 28) <= sm_rxdata;
+
+	TC_SCLK <= sclk;
+	TC_MOSI <= mosi;
+	miso <= TC_MISO;
+	TC_SSn <= ssn;
+
 	osif_setup (
 		i_osif,
 		o_osif,
@@ -95,7 +122,7 @@ begin
 
 	x_pos_s <= x_pos - 2048;
 	y_pos_s <= y_pos - 2048;
-	pos <= x"00" & std_logic_vector(x_pos_s(11 downto 0)) & std_logic_vector(y_pos_s(11 downto 0));
+	pos <= x"00" & std_logic_vector(x_pos(11 downto 0)) & std_logic_vector(y_pos(11 downto 0));
 
 	osfsm_proc: process (HWT_Clk,HWT_Rst,o_osif,o_memif) is
 		variable resume, done : boolean;
@@ -121,6 +148,7 @@ begin
 					GET_INIT_DATA(i_osif, o_osif, ret, done);
 					if done then
 						rb_info <= unsigned(ret);
+						wait_count <= (others => '0');
 
 						state <= STATE_CTRL;
 					end if;
@@ -135,6 +163,8 @@ begin
 
 				when STATE_WAIT =>
 					if wait_count = ctrl_wait then
+						wait_count <= (others => '0');
+
 						state <= STATE_START_X;
 					end if;
 
@@ -154,8 +184,6 @@ begin
 				when STATE_READ_Y =>
 					if sm_ready = '1' then
 						y_pos <= signed("0" & sm_rxdata(14 downto 3));
-
-						wait_count <= (others => '0');
 
 						state <= STATE_STORE_POS;
 					end if;
@@ -198,22 +226,22 @@ begin
 	--                         0   1    = power down without penirq
 	--                         1   0    = reserved
 	--                         1   1    = no power down
-	sm_txdata <= "11010000" & x"0000" when state = STATE_START_X else
-	             "10010000" & x"0000" when state = STATE_START_Y else
+	sm_txdata <= "11010011" & x"0000" when state = STATE_START_X else
+	             "10010011" & x"0000" when state = STATE_START_Y else
 	             (others => '0');
 
 	sm_inst : entity rt_touch_v1_00_a.spi_master
 		generic map (
 			G_SM_CLK_PRD  => 10ns,
-			G_SPI_CLK_PRD => 400ns,
+			G_SPI_CLK_PRD => 8000ns,
 
 			G_DATA_LEN => 24
 		)
 		port map (
-			SPI_SCLK => TC_SCLK,
-			SPI_MOSI => TC_MOSI,
-			SPI_MISO => TC_MISO,
-			SPI_SSn  => TC_SSn,
+			SPI_SCLK => sclk,
+			SPI_MOSI => mosi,
+			SPI_MISO => miso,
+			SPI_SSn  => ssn,
 
 			SM_TxData => sm_txdata,
 			SM_RxData => sm_rxdata,
