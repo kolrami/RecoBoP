@@ -50,6 +50,7 @@ ap_uint<32> inverse(ap_uint<32> data) {
 
 #ifdef __RECONOS__
 		ap_uint<32> data = MBOX_GET(inverse_cmd);
+		MBOX_PUT(performance_perf, (ap_uint<8>("20", 16), ap_uint<21>(0), data(2, 0)));
 #endif
 
 		ap_uint<10> cmd_x = data(31, 22);
@@ -152,6 +153,7 @@ ap_uint<32> inverse(ap_uint<32> data) {
 
 #ifdef __RECONOS__
 		MBOX_PUT(servo_cmd, (v_s_aj_l_mina, cmd_l, ap_uint<18>(0)));
+		MBOX_PUT(performance_perf, (ap_uint<8>("21", 16), ap_uint<21>(0), data(2, 0)));
 #else
 		return (v_s_aj_l_mina, cmd_l, ap_uint<18>(0));
 #endif

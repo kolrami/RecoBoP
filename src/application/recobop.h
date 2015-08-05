@@ -11,6 +11,11 @@ struct recobop_info {
 	uint32_t saw_pos;
 
 	uint32_t ctrl_touch_wait;
+
+	uint32_t perf_touch;
+	uint32_t perf_control;
+	uint32_t perf_inverse;
+	uint32_t perf_all;
 };
 
 static inline uint32_t fltofi(float f, int n, int dn) {
