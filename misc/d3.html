@@ -8,8 +8,11 @@
 body {font-family: "DejaVu Sans Mono"; }
 h1 {font-weight: 100; }
 .graph path {fill: none; stroke: blue; stroke-width:1px; }
+.graph circle {fill: blue; }
 .xaxis path {stroke: black; stroke-width: 1px; fill: none; }
+.xaxis text {fill: black; }
 .yaxis path {stroke: black; stroke-width: 1px; fill: none; }
+.yaxis text {fill: black; }
 .tick text {font-size: 11px; }
 </style>
 </head>
@@ -17,6 +20,7 @@ h1 {font-weight: 100; }
 <body>
 <h1>RecoBoP</h1>
 <svg id="saw_vsense" />
+<svg id="saw_pos" />
 
 <script type="text/javascript">
 function getTime() {
@@ -28,7 +32,7 @@ var time_start = getTime();
 
 <script type="text/javascript">
 var saw_vsense_data_max = 20;
-var saw_vsense_interval = 500;
+var saw_vsense_interval = 100;
 var saw_vsense_data = [];
 
 var saw_vsense_xaxis_scale, saw_vsense_yaxis_scale;
@@ -64,9 +68,9 @@ function saw_vsense_update() {
 
 function saw_vsense_init() {
 	d3.select("#saw_vsense").attr("width", saw_vsense_width).attr("height", saw_vsense_height);
-	d3.select("#saw_vsense").append("g").attr("class", "graph").attr("transform", "translate(" + saw_vsense_padding + ", " + saw_vsense_padding + ")").append("path");
 	d3.select("#saw_vsense").append("g").attr("class", "xaxis");
 	d3.select("#saw_vsense").append("g").attr("class", "yaxis");
+	d3.select("#saw_vsense").append("g").attr("class", "graph").attr("transform", "translate(" + saw_vsense_padding + ", " + saw_vsense_padding + ")").append("path");
 
 	saw_vsense_xaxis_scale = d3.scale.linear();
 	saw_vsense_xaxis_scale.domain([0, (saw_vsense_data_max - 1) * saw_vsense_interval]);
@@ -83,10 +87,69 @@ function saw_vsense_init() {
 	d3.select("#saw_vsense").select(".yaxis").call(yaxis);
 	d3.select("#saw_vsense").select(".yaxis").attr("transform", "translate(" + saw_vsense_padding + "," + (saw_vsense_padding) + ")");
 }
+
+
+var saw_pos_interval = 100;
+var saw_pos_data = { x:0, y:0 };
+
+var saw_pos_xaxis_scale, saw_pos_yaxis_scale;
+
+var saw_pos_width = 500;
+var saw_pos_height = 500;
+var saw_pos_padding = 40;
+
+function saw_pos_update() {
+	var request = new XMLHttpRequest();
+	request.open("GET", "/saw_pos/x", false);
+	request.send(null);
+	if (request.status === 200) {
+		saw_pos_data.x = parseInt(request.responseText);
+	} else {
+		return;
+	}
+
+	var request = new XMLHttpRequest();
+	request.open("GET", "/saw_pos/y", false);
+	request.send(null);
+	if (request.status === 200) {
+		saw_pos_data.y = parseInt(request.responseText);
+	} else {
+		return;
+	}
+
+	d3.select("#saw_pos").select(".graph").select("circle").datum(saw_pos_data);
+	d3.select("#saw_pos").select(".graph").select("circle").attr("cx", function(d, i) { return saw_pos_xaxis_scale(d.x); });
+	d3.select("#saw_pos").select(".graph").select("circle").attr("cy", function(d, i) { return saw_pos_yaxis_scale(d.y); });
+}
+
+function saw_pos_init() {
+	d3.select("#saw_pos").attr("width", saw_pos_width).attr("height", saw_pos_height);
+	d3.select("#saw_pos").append("g").attr("class", "xaxis");
+	d3.select("#saw_pos").append("g").attr("class", "yaxis");
+	d3.select("#saw_pos").append("g").attr("class", "graph").attr("transform", "translate(" + saw_pos_width / 2 + ", " + saw_pos_height / 2 + ")").append("circle").attr("r", 5).attr("cx", 0).attr("cy", 0);
+
+	saw_pos_xaxis_scale = d3.scale.linear();
+	saw_pos_xaxis_scale.domain([-2048, 2048]);
+	saw_pos_xaxis_scale.range([-saw_pos_width / 2 + saw_pos_padding, saw_pos_width / 2 - saw_pos_padding]);
+
+	saw_pos_yaxis_scale = d3.scale.linear();
+	saw_pos_yaxis_scale.domain([2048, -2048]);
+	saw_pos_yaxis_scale.range([-saw_pos_height / 2 + saw_pos_padding, saw_pos_height / 2 - saw_pos_padding]);
+
+	var xaxis = d3.svg.axis().orient("bottom").scale(saw_pos_xaxis_scale);
+	d3.select("#saw_pos").select(".xaxis").call(xaxis);
+	d3.select("#saw_pos").select(".xaxis").attr("transform", "translate(" + (saw_pos_width / 2) + "," + (saw_pos_height / 2) + ")");
+	var yaxis = d3.svg.axis().orient("left").scale(saw_pos_yaxis_scale);
+	d3.select("#saw_pos").select(".yaxis").call(yaxis);
+	d3.select("#saw_pos").select(".yaxis").attr("transform", "translate(" + (saw_pos_width / 2) + "," + (saw_pos_height / 2) + ")");
+}
+
 </script>
 
 <script type="text/javascript">
 saw_vsense_init();
+saw_pos_init();
 window.setInterval(saw_vsense_update, saw_vsense_interval);
+window.setInterval(saw_pos_update, saw_pos_interval);
 </script>
 </body>
