@@ -12,14 +12,15 @@ TIMESPEC TS_reconos_clk_<<Id>> = PERIOD "NET_reconos_clk_<<Id>>" <<ActFreqKHz>> 
 NET srv0_out_pin  LOC = Y11  | IOSTANDARD = LVCMOS33; # JA1
 NET srv1_out_pin  LOC = AA11 | IOSTANDARD = LVCMOS33; # JA2
 NET srv2_out_pin  LOC = Y10  | IOSTANDARD = LVCMOS33; # JA3
-NET srv3_out_pin  LOC = AA9  | IOSTANDARD = LVCMOS33; # JA4
-NET srv4_out_pin  LOC = AB11 | IOSTANDARD = LVCMOS33; # JA7
-NET srv5_out_pin  LOC = AB10 | IOSTANDARD = LVCMOS33; # JA8
+NET srv3_out_pin  LOC = AB11 | IOSTANDARD = LVCMOS33; # JA7
+NET srv4_out_pin  LOC = AB10 | IOSTANDARD = LVCMOS33; # JA8
+NET srv5_out_pin  LOC = AB9  | IOSTANDARD = LVCMOS33; # JA9
 
-NET touch_sclk LOC = W12 | IOSTANDARD = LVCMOS33; # JB1
-NET touch_mosi LOC = W11 | IOSTANDARD = LVCMOS33; # JB2
-NET touch_miso LOC = V10 | IOSTANDARD = LVCMOS33; # JB3
-NET touch_ssn  LOC = W8  | IOSTANDARD = LVCMOS33; # JB4
+NET touch_sclk_pin LOC = W12 | IOSTANDARD = LVCMOS33; # JB1
+NET touch_mosi_pin LOC = W11 | IOSTANDARD = LVCMOS33; # JB2
+NET touch_miso_pin LOC = V10 | IOSTANDARD = LVCMOS33; # JB3
+NET touch_ssn_pin  LOC = W8  | IOSTANDARD = LVCMOS33; # JB4
+NET touch_irq_pin  LOC = V12 | IOSTANDARD = LVCMOS33 | PULLUP; # JB7
 
 NET vga_red_pin<0>   LOC = V20  | IOSTANDARD=LVCMOS33;
 NET vga_red_pin<1>   LOC = U20  | IOSTANDARD=LVCMOS33;
@@ -35,3 +36,5 @@ NET vga_blue_pin<2>  LOC = AB20 | IOSTANDARD=LVCMOS33;
 NET vga_blue_pin<3>  LOC = AB19 | IOSTANDARD=LVCMOS33;
 NET vga_hsync_pin    LOC = AA19 | IOSTANDARD=LVCMOS33;
 NET vga_vsync_pin    LOC = Y19  | IOSTANDARD=LVCMOS33;
+
+NET led_pin  LOC = U14  |  IOSTANDARD=LVCMOS33;

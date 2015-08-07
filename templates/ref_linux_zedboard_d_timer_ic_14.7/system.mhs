@@ -31,16 +31,19 @@ PORT srv3_out_pin = slot_0_SRV3_Out, DIR = O
 PORT srv4_out_pin = slot_0_SRV4_Out, DIR = O
 PORT srv5_out_pin = slot_0_SRV5_Out, DIR = O
 
-PORT touch_sclk = slot_1_TC_SCLK, DIR = O
-PORT touch_mosi = slot_1_TC_MOSI, DIR = O
-PORT touch_miso = slot_1_TC_MISO, DIR = I
-PORT touch_ssn = slot_1_TC_SSn, DIR = O
+PORT touch_sclk_pin = slot_1_TC_SCLK, DIR = O
+PORT touch_mosi_pin = slot_1_TC_MOSI, DIR = O
+PORT touch_miso_pin = slot_1_TC_MISO, DIR = I
+PORT touch_ssn_pin = slot_1_TC_SSn, DIR = O
+PORT touch_irq_pin = slot_1_TC_IRQ, DIR = I
 
 PORT vga_red_pin = slot_2_VGA_Red, DIR = O, VEC = [3:0]
 PORT vga_green_pin = slot_2_VGA_Green, DIR = O, VEC = [3:0]
 PORT vga_blue_pin = slot_2_VGA_Blue, DIR = O, VEC = [3:0]
 PORT vga_hsync_pin = slot_2_VGA_HSync, DIR = O
 PORT vga_vsync_pin = slot_2_VGA_VSync, DIR = O
+
+PORT led_pin = slot_1_TC_IRQ, DIR = O
 
 BEGIN axi_interconnect
  PARAMETER INSTANCE = axi_hwt
