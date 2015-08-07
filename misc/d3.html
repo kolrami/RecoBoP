@@ -9,6 +9,7 @@ body {font-family: "DejaVu Sans Mono"; }
 h1 {font-weight: 100; }
 .graph path {fill: none; stroke: blue; stroke-width:1px; }
 .graph circle {fill: blue; }
+.graph text {font-size: 11px; }
 .xaxis path {stroke: black; stroke-width: 1px; fill: none; }
 .xaxis text {fill: black; }
 .yaxis path {stroke: black; stroke-width: 1px; fill: none; }
@@ -46,7 +47,7 @@ function saw_vsense_update() {
 	request.open("GET", "/saw_vsense", false);
 	request.send(null);
 	if (request.status === 200) {
-		var saw_vsense = parseInt(request.responseText);
+		var saw_vsense = parseFloat(request.responseText);
 	} else {
 		return;
 	}
@@ -77,7 +78,7 @@ function saw_vsense_init() {
 	saw_vsense_xaxis_scale.range([0, saw_vsense_width - 2 * saw_vsense_padding]);
 
 	saw_vsense_yaxis_scale = d3.scale.linear();
-	saw_vsense_yaxis_scale.domain([500, 0]);
+	saw_vsense_yaxis_scale.domain([3.8, 3.2]);
 	saw_vsense_yaxis_scale.range([0, saw_vsense_height - 2 * saw_vsense_padding]);
 
 	var xaxis = d3.svg.axis().orient("bottom").scale(saw_vsense_xaxis_scale);
@@ -117,16 +118,23 @@ function saw_pos_update() {
 		return;
 	}
 
-	d3.select("#saw_pos").select(".graph").select("circle").datum(saw_pos_data);
-	d3.select("#saw_pos").select(".graph").select("circle").attr("cx", function(d, i) { return saw_pos_xaxis_scale(d.x); });
-	d3.select("#saw_pos").select(".graph").select("circle").attr("cy", function(d, i) { return saw_pos_yaxis_scale(d.y); });
+	d3.select("#saw_pos").select(".graph").select("#pos").datum(saw_pos_data);
+	d3.select("#saw_pos").select(".graph").select("#pos").selectAll().datum(saw_pos_data);
+	d3.select("#saw_pos").select(".graph").select("#pos").attr("transform", function(d, i) { return "translate(" + saw_pos_xaxis_scale(d.x) + "," + saw_pos_yaxis_scale(d.y) + ")" });
+	d3.select("#saw_pos").select(".graph").select("#pos").select("text").text(function(d, i) {return ("(" + d.x + "," + d.y + ")")});
+
+	//d3.select("#saw_pos").select(".graph").select("circle").datum(saw_pos_data);
+	//d3.select("#saw_pos").select(".graph").select("circle").attr("cx", function(d, i) { return saw_pos_xaxis_scale(d.x); });
+	//d3.select("#saw_pos").select(".graph").select("circle").attr("cy", function(d, i) { return saw_pos_yaxis_scale(d.y); });
 }
 
 function saw_pos_init() {
 	d3.select("#saw_pos").attr("width", saw_pos_width).attr("height", saw_pos_height);
 	d3.select("#saw_pos").append("g").attr("class", "xaxis");
 	d3.select("#saw_pos").append("g").attr("class", "yaxis");
-	d3.select("#saw_pos").append("g").attr("class", "graph").attr("transform", "translate(" + saw_pos_width / 2 + ", " + saw_pos_height / 2 + ")").append("circle").attr("r", 5).attr("cx", 0).attr("cy", 0);
+	d3.select("#saw_pos").append("g").attr("class", "graph").attr("transform", "translate(" + saw_pos_width / 2 + ", " + saw_pos_height / 2 + ")").append("g").attr("id", "pos")
+	d3.select("#saw_pos").select(".graph").select("#pos").append("circle").attr("r", 5).attr("cx", 0).attr("cy", 0);
+	d3.select("#saw_pos").select(".graph").select("#pos").append("text").attr("x", 5).attr("y", 5).text("Hello World");
 
 	saw_pos_xaxis_scale = d3.scale.linear();
 	saw_pos_xaxis_scale.domain([-2048, 2048]);

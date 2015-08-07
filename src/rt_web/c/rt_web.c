@@ -30,6 +30,11 @@ THREAD_ENTRY() {
 	char index[INDEX_COUNT_MAX];
 	ssize_t index_count;
 
+	struct recobop_info *rb_info;
+
+	THREAD_INIT();
+	rb_info = (struct recobop_info *)GET_INIT_DATA();
+
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(12345);
 	server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -71,13 +76,13 @@ THREAD_ENTRY() {
 		if (!strncmp(header, "GET / ", 6)) {
 			send(client_sock, index, index_count, 0);
 		} else if (!strncmp(header, "GET /saw_pos/x ", 15)) {
-			buf_count = snprintf(buf, 1024, "%d", rand() % 4096 - 2048);
+			buf_count = snprintf(buf, 1024, "%d", rbi_saw_pos_x(rb_info));
 			send(client_sock, buf, buf_count, 0);
 		} else if (!strncmp(header, "GET /saw_pos/y ", 15)) {
-			buf_count = snprintf(buf, 1024, "%d", rand() % 4096 - 2048);
+			buf_count = snprintf(buf, 1024, "%d", rbi_saw_pos_y(rb_info));
 			send(client_sock, buf, buf_count, 0);
 		} else if (!strncmp(header, "GET /saw_vsense ", 16)) {
-			buf_count = snprintf(buf, 1024, "%d", rand() % 256);
+			buf_count = snprintf(buf, 1024, "%f", rbi_saw_power(rb_info));
 			send(client_sock, buf, buf_count, 0);
 		}
 
@@ -85,4 +90,6 @@ THREAD_ENTRY() {
 	}
 
 	close(server_sock);
+
+	THREAD_EXIT();
 }
