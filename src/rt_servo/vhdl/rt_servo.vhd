@@ -49,7 +49,7 @@ architecture implementation of rt_servo is
 	signal o_memif : o_memif_t;
 
 	type STATE_TYPE is (STATE_THREAD_INIT,
-	                    STATE_CMD,STATE_STORE);
+	                    STATE_CMD,STATE_STORE, STATE_PERF);
 	signal state : STATE_TYPE;
 
 	subtype C_ANGLE_RANGE is natural range 31 downto 21;
@@ -134,25 +134,38 @@ begin
 						when others =>
 					end case;
 
-					state <= STATE_CMD;
+					state <= STATE_PERF;
+
+				when STATE_PERF =>
+					MBOX_PUT(i_osif, o_osif, performance_perf, x"31000000", ignore, done);
+					if done then
+						state <= STATE_CMD;
+					end if;
 
 			end case;
 		end if;
 	end process osfsm_proc;
+
+	srv0_c <= srv0_a * 100 + C_SRV0_CAL;
+	srv1_c <= srv1_a * 100 + C_SRV1_CAL;
+	srv2_c <= srv2_a * 100 + C_SRV2_CAL;
+	srv3_c <= srv3_a * 100 + C_SRV3_CAL;
+	srv4_c <= srv4_a * 100 + C_SRV4_CAL;
+	srv5_c <= srv5_a * 100 + C_SRV5_CAL;
 
 	srv_proc: process(HWT_Clk) is
 	begin
 		if rising_edge(HWT_Clk) then
 			srv_count <= srv_count + 1;
 
-			if srv_count = 1999999 then
+			if srv_count = 1000000 then
 				srv_count <= (others => '0');
-				srv0_c <= srv0_a * 100 + C_SRV0_CAL;
-				srv1_c <= srv1_a * 100 + C_SRV1_CAL;
-				srv2_c <= srv2_a * 100 + C_SRV2_CAL;
-				srv3_c <= srv3_a * 100 + C_SRV3_CAL;
-				srv4_c <= srv4_a * 100 + C_SRV4_CAL;
-				srv5_c <= srv5_a * 100 + C_SRV5_CAL;
+	--			srv0_c <= srv0_a * 100 + C_SRV0_CAL;
+	--			srv1_c <= srv1_a * 100 + C_SRV1_CAL;
+	--			srv2_c <= srv2_a * 100 + C_SRV2_CAL;
+	--			srv3_c <= srv3_a * 100 + C_SRV3_CAL;
+	--			srv4_c <= srv4_a * 100 + C_SRV4_CAL;
+	--			srv5_c <= srv5_a * 100 + C_SRV5_CAL;
 			end if;
 		end if;
 	end process srv_proc;
