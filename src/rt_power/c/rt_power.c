@@ -37,15 +37,15 @@ THREAD_ENTRY() {
 	}
 
 	while(1) {
-		vsense = i2c_smbus_read_word_data(i2c, 0x00) >> 4;
-		vin = i2c_smbus_read_word_data(i2c, 0x02) >> 4;
+		vsense = (i2c_smbus_read_byte_data(i2c, 0x00) << 4) | (i2c_smbus_read_byte_data(i2c, 0x01) >> 4);
+		vin = (i2c_smbus_read_byte_data(i2c, 0x02) << 4) | (i2c_smbus_read_byte_data(i2c, 0x03) >> 4);	
 
-		debug("Voltage: V_in = %d, V_sense = %d", vin, vsense);
-		rb_info->saw_vin = vin;
-		rb_info->saw_vsense = vsense;
-		rb_info->saw_power = vsense / 100;
+		debug("Voltage: V_in = %fV, V_sense = %fmV => P = %fW", vin * 0.025, vsense * 0.02, vsense * vin * 0.00005);
+		rb_info->saw_vin = vin * 0.025;
+		rb_info->saw_vsense = vsense * 0.02;
+		rb_info->saw_power = vin * vsense * 0.00005;
 
-		usleep(10000);
+		usleep(200000);
 	}
 
 	close(i2c);
