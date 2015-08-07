@@ -28,6 +28,8 @@ architecture implementation of spi_master is
 	signal sclk_count : unsigned(31 downto 0) := (others => '0');
 	signal sclk       : std_logic := '0';
 
+	signal miso_s_0, miso_s_1 : std_logic;
+
 	type STATE_TYPE is (STATE_WAIT, STATE_PROC);
 	signal state : STATE_TYPE := STATE_WAIT;
 
@@ -64,7 +66,7 @@ begin
 
 								state <= STATE_WAIT;
 							else
-								rxdata <= rxdata(G_DATA_LEN - 2 downto 0) & SPI_MISO;
+								rxdata <= rxdata(G_DATA_LEN - 2 downto 0) & miso_s_0;
 
 								data_count <= data_count + 1;
 							end if;
@@ -74,6 +76,14 @@ begin
 			end case;
 		end if;
 	end process ctrl_proc;
+
+	sync_proc : process (SM_Clk) is
+	begin
+		if rising_edge(SM_Clk) then
+			miso_s_1 <= SPI_MISO;
+			miso_s_0 <= miso_s_1;
+		end if;
+	end process sync_proc;
 
 	SPI_SCLK <= sclk;
 	SPI_MOSI <= txdata(G_DATA_LEN - 1);

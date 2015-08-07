@@ -37,8 +37,7 @@ entity rt_touch is
 		TC_MOSI  : out std_logic;
 		TC_MISO  : in  std_logic := '0';
 		TC_SSn   : out std_logic;
-
-		DEBUG : out std_logic_vector(51 downto 0)
+		TC_IRQ   : in  std_logic := '0'
 	);
 end entity rt_touch;
 
@@ -48,56 +47,69 @@ architecture implementation of rt_touch is
 	signal i_memif : i_memif_t;
 	signal o_memif : o_memif_t;
 
-	constant C_WAIT_COUNT : integer := 10000;
+	--constant C_MEDIAN_COUNT : integer := 3;
 
 	type STATE_TYPE is (STATE_THREAD_INIT, STATE_INIT_DATA,
-	                    STATE_WAIT, STATE_CTRL,
+	                    STATE_WAIT, STATE_CTRL, STATE_IRQ,
 	                    STATE_START_X, STATE_READ_X,
 	                    STATE_START_Y, STATE_READ_Y,
+	                    STATE_POS, STATE_SCALE,
 	                    STATE_STORE_POS, STATE_STORE_DELTA,
-	                    STATE_SAW);
+	                    STATE_SAW, STATE_PERF_BEGIN, STATE_PERF_END);
 	signal state : STATE_TYPE;
+
+	signal irq_s_0, irq_s_1 : std_logic;
 
 	signal rb_info : unsigned(31 downto 0);
 
 	signal sm_start, sm_ready   : std_logic;
 	signal sm_txdata, sm_rxdata : std_logic_vector(23 downto 0);
 	
-	signal wait_count :  unsigned(31 downto 0);
+	signal wait_count :  unsigned(23 downto 0);
 
-	signal x_pos, y_pos     : signed(12 downto 0) := (others => '0');
-	signal x_pos_s, y_pos_s : signed(12 downto 0);
-	signal pos              : std_logic_vector(31 downto 0);
+	--type T_POS_ARRAY is array (0 to C_MEDIAN_COUNT - 1) of std_logic_vector(11 downto 0);
+	signal x_pos, y_pos : std_logic_vector(11 downto 0);--T_POS_ARRAY := (others => (others => '0'));
+	--signal pos_count    : integer range 0 to C_MEDIAN_COUNT - 1;
 
-	signal ctrl_wait : unsigned(31 downto 0);
+	signal x_pos_s, y_pos_s : std_logic_vector(11 downto 0);
+
+	signal ctrl_wait : unsigned(23 downto 0);
+	signal ctrl_avg : std_logic_vector(3 downto 0);
 
 	signal ignore, ret : std_logic_vector(31 downto 0);
 
-	signal sclk, mosi, miso, ssn : std_logic;
+	signal scale_start, scale_done, scale_idle, scale_ready : std_logic;
+	signal scale_x_pos_s, scale_y_pos_s                     : std_logic_vector(11 downto 0);
+	signal scale_x_pos_s_vld, scale_y_pos_s_vld             : std_logic;
+
+	component scale is
+		port (
+			ap_clk   : in  std_logic;
+			ap_rst   : in  std_logic;
+			ap_start : in  std_logic;
+			ap_done  : out std_logic;
+			ap_idle  : out std_logic;
+			ap_ready : out std_logic;
+
+			x_u_V        : in std_logic_vector (11 downto 0);
+			--x_u_1_V      : in std_logic_vector (11 downto 0);
+			--x_u_2_V      : in std_logic_vector (11 downto 0);
+			--x_u_3_V      : in std_logic_vector (11 downto 0);
+			--x_u_4_V      : in std_logic_vector (11 downto 0);
+			y_u_V        : in std_logic_vector (11 downto 0);
+			--y_u_1_V      : in std_logic_vector (11 downto 0);
+			--y_u_2_V      : in std_logic_vector (11 downto 0);
+			--y_u_3_V      : in std_logic_vector (11 downto 0);
+			--y_u_4_V      : in std_logic_vector (11 downto 0);
+			x_s_V        : out std_logic_vector (11 downto 0);
+			x_s_V_ap_vld : out std_logic;
+			y_s_V        : out std_logic_vector (11 downto 0);
+			y_s_V_ap_vld : out std_logic;
+
+			average_V    : in std_logic_vector(3 downto 0)
+		);
+	end component;
 begin
-	DEBUG(0) <= '1' when state = STATE_THREAD_INIT else '0';
-	DEBUG(1) <= '1' when state = STATE_INIT_DATA else '0';
-	DEBUG(2) <= '1' when state = STATE_WAIT else '0';
-	DEBUG(3) <= '1' when state = STATE_CTRL else '0';
-	DEBUG(4) <= '1' when state = STATE_START_X else '0';
-	DEBUG(5) <= '1' when state = STATE_READ_X else '0';
-	DEBUG(6) <= '1' when state = STATE_START_Y else '0';
-	DEBUG(7) <= '1' when state = STATE_READ_Y else '0';
-	DEBUG(8) <= '1' when state = STATE_STORE_POS else '0';
-	DEBUG(9) <= '1' when state = STATE_STORE_DELTA else '0';
-	DEBUG(10) <= '1' when state = STATE_SAW else '0';
-	DEBUG(11) <= sclk;
-	DEBUG(12) <= mosi;
-	DEBUG(13) <= miso;
-	DEBUG(14) <= ssn;
-	DEBUG(27 downto 15) <= std_logic_vector(x_pos);
-	DEBUG(51 downto 28) <= sm_rxdata;
-
-	TC_SCLK <= sclk;
-	TC_MOSI <= mosi;
-	miso <= TC_MISO;
-	TC_SSn <= ssn;
-
 	osif_setup (
 		i_osif,
 		o_osif,
@@ -120,10 +132,6 @@ begin
 		MEMIF_Hwt2Mem_WE
 	);
 
-	x_pos_s <= x_pos - 2048;
-	y_pos_s <= y_pos - 2048;
-	pos <= x"00" & std_logic_vector(x_pos(11 downto 0)) & std_logic_vector(y_pos(11 downto 0));
-
 	osfsm_proc: process (HWT_Clk,HWT_Rst,o_osif,o_memif) is
 		variable resume, done : boolean;
 	begin
@@ -132,6 +140,7 @@ begin
 			memif_reset(o_memif);
 
 			wait_count <= (others => '0');
+			--pos_count <= 0;
 
 			state <= STATE_THREAD_INIT;
 		elsif rising_edge(HWT_Clk) then
@@ -156,15 +165,28 @@ begin
 				when STATE_CTRL =>
 					MEM_READ_WORD(i_memif, o_memif, std_logic_vector(rb_info + 16), ret, done);
 					if done then
-						ctrl_wait <= unsigned(ret);
+						ctrl_wait <= unsigned(ret(23 downto 0));
+						ctrl_avg  <= ret(27 downto 24);
 
 						state <= STATE_WAIT;
 					end if;
 
 				when STATE_WAIT =>
 					if wait_count = ctrl_wait then
-						wait_count <= (others => '0');
+						state <= STATE_IRQ;
+					end if;
 
+				when STATE_IRQ =>
+					if irq_s_0 = '0' then
+						wait_count <= (others => '0');
+						state <= STATE_PERF_BEGIN;
+					else
+						ctrl_wait <= ctrl_wait + 1;
+					end if;
+
+				when STATE_PERF_BEGIN =>
+					MBOX_PUT(i_osif, o_osif, performance_perf, x"00000000", ignore, done);
+					if done then
 						state <= STATE_START_X;
 					end if;
 
@@ -173,7 +195,8 @@ begin
 
 				when STATE_READ_X =>
 					if sm_ready = '1' then
-						x_pos <= signed("0" & sm_rxdata(14 downto 3));
+						--x_pos(pos_count) <= sm_rxdata(14 downto 3);
+						x_pos <= sm_rxdata(14 downto 3);
 
 						state <= STATE_START_Y;
 					end if;
@@ -183,34 +206,73 @@ begin
 
 				when STATE_READ_Y =>
 					if sm_ready = '1' then
-						y_pos <= signed("0" & sm_rxdata(14 downto 3));
+						--y_pos(pos_count) <= sm_rxdata(14 downto 3);
+						y_pos <= sm_rxdata(14 downto 3);
 
+						state <= STATE_SCALE;
+					end if;
+
+				--when STATE_POS =>
+				--	if pos_count = C_MEDIAN_COUNT - 1 then
+				--		pos_count <= 0;
+				--		state <= STATE_SCALE;
+				--	else
+				--		pos_count <= pos_count + 1;
+				--		state <= STATE_START_X;
+				--	end if;
+
+				when STATE_SCALE =>
+					if scale_done = '1' then
 						state <= STATE_STORE_POS;
 					end if;
 
+					if scale_x_pos_s_vld = '1' then
+						x_pos_s <= scale_x_pos_s;
+					end if;
+
+					if scale_y_pos_s_vld = '1' then
+						y_pos_s <= scale_y_pos_s;
+					end if;
+
 				when STATE_STORE_POS =>
-					MBOX_PUT(i_osif, o_osif, touch_pos, pos, ignore, done);
+					MBOX_PUT(i_osif, o_osif, touch_pos, x"00" & x_pos_s & y_pos_s, ignore, done);
 
 					if done then
 						state <= STATE_STORE_DELTA;
 					end if;
 
 				when STATE_STORE_DELTA =>
-					MBOX_PUT(i_osif, o_osif, touch_pos, std_logic_vector(ctrl_wait), ignore, done);
+					MBOX_PUT(i_osif, o_osif, touch_pos, x"00" & std_logic_vector(ctrl_wait), ignore, done);
 
+					if done then
+						state <= STATE_PERF_END;
+					end if;
+
+				when STATE_PERF_END =>
+					MBOX_PUT(i_osif, o_osif, performance_perf, x"01000000", ignore, done);
 					if done then
 						state <= STATE_SAW;
 					end if;
 
 				when STATE_SAW =>
-					MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 12), pos, done);
+					MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 12), x"00" & x_pos_s & y_pos_s, done);
 					if done then
 						state <= STATE_CTRL;
 					end if;
 
+				when others =>
+
 			end case;
 		end if;
 	end process osfsm_proc;
+
+	sync_proc : process(HWT_Clk) is
+	begin
+		if rising_edge(HWT_Clk) then
+			irq_s_1 <= TC_IRQ;
+			irq_s_0 <= irq_s_1;
+		end if;
+	end process sync_proc;
 
 	sm_start <= '1' when state = STATE_START_X else
 	            '1' when state = STATE_START_Y else
@@ -226,28 +288,55 @@ begin
 	--                         0   1    = power down without penirq
 	--                         1   0    = reserved
 	--                         1   1    = no power down
-	sm_txdata <= "11010011" & x"0000" when state = STATE_START_X else
-	             "10010011" & x"0000" when state = STATE_START_Y else
+	sm_txdata <= "11010000" & x"0000" when state = STATE_START_X else
+	             "10010000" & x"0000" when state = STATE_START_Y else
 	             (others => '0');
 
 	sm_inst : entity rt_touch_v1_00_a.spi_master
 		generic map (
 			G_SM_CLK_PRD  => 10ns,
-			G_SPI_CLK_PRD => 8000ns,
+			G_SPI_CLK_PRD => 24000ns,
 
 			G_DATA_LEN => 24
 		)
 		port map (
-			SPI_SCLK => sclk,
-			SPI_MOSI => mosi,
-			SPI_MISO => miso,
-			SPI_SSn  => ssn,
+			SPI_SCLK => TC_SCLK,
+			SPI_MOSI => TC_MOSI,
+			SPI_MISO => TC_MISO,
+			SPI_SSn  => TC_SSn,
 
 			SM_TxData => sm_txdata,
 			SM_RxData => sm_rxdata,
 			SM_Start  => sm_start,
 			SM_Ready  => sm_ready,
 			SM_Clk    => HWT_Clk
+		);
+
+	scale_start <= '1' when state = STATE_SCALE else '0';
+
+	scale_inst : scale
+		port map (
+			ap_clk => HWT_Clk,
+			ap_rst => HWT_Rst,
+			ap_start => scale_start,
+			ap_done  => scale_done,
+			ap_idle  => scale_idle,
+			ap_ready => scale_ready,
+			x_u_V => x_pos,
+			--x_u_1_V => x_pos(1),
+			--x_u_2_V => x_pos(2),
+			--x_u_3_V => x_pos(3),
+			--x_u_4_V => x_pos(4),
+			y_u_V => y_pos,
+			--y_u_1_V => y_pos(1),
+			--y_u_2_V => y_pos(2),
+			--y_u_3_V => y_pos(3),
+			--y_u_4_V => y_pos(4),
+			x_s_V => scale_x_pos_s,
+			x_s_V_ap_vld => scale_x_pos_s_vld,
+			y_s_V => scale_y_pos_s,
+			y_s_V_ap_vld => scale_y_pos_s_vld,
+			average_V => ctrl_avg
 		);
 
 end architecture;
