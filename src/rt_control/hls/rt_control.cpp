@@ -7,6 +7,10 @@
 #include "ap_fixed.h"
 #include "math.h"
 
+#define KP -0.08
+#define KI -0.00004
+#define KD -25
+
 #ifdef __RECONOS__
 THREAD_ENTRY() {
 	THREAD_INIT();
@@ -14,7 +18,8 @@ THREAD_ENTRY() {
 	ap_uint<32> control(ap_uint<32> pos, ap_uint<32> wait) {
 #endif
 
-	ap_ufixed<22,12> error, error_last, error_diff, error_sum = 0;
+	ap_ufixed<22,12> error_x, error_x_last, error_x_diff, error_x_sum = 0;
+	ap_ufixed<22,12> error_y, error_y_last, error_y_diff, error_y_sum = 0;
 
 #ifdef __RECONOS__
 	while (1) {
@@ -23,6 +28,7 @@ THREAD_ENTRY() {
 #ifdef __RECONOS__
 		ap_uint<32> pos = MBOX_GET(touch_pos);
 		ap_uint<32> wait = MBOX_GET(touch_pos);
+		MBOX_PUT(performance_perf, (ap_uint<8>("10", 16), ap_uint<24>(0)));
 #endif
 
 		ap_uint<12> pos_x = pos(23, 12);
@@ -41,35 +47,35 @@ THREAD_ENTRY() {
 #endif
 
 
-		// calculate rotation vector
-		ap_fixed<10,2> t_p2b_ra_x = p_p_b_y / sqrt(p_p_b_x * p_p_b_x + p_p_b_y * p_p_b_y);
-		ap_fixed<10,2> t_p2b_ra_y = - p_p_b_x / sqrt(p_p_b_x * p_p_b_x + p_p_b_y * p_p_b_y);
+		// implement PID controller for x
+		error_x = p_p_b_x;
+		error_x_diff = (error_x - error_x_last) / delta;
+		error_x_sum += error_x * delta;
+		error_x_last = error_x;
 
-#ifndef __SYNTHESIS__
-		printf("rotation vector %f %f\n", t_p2b_ra_x.to_float(), t_p2b_ra_y.to_float());
-#endif
+		ap_ufixed<22,12> ctrl_x_p = ap_ufixed<22,12>(KP) * error_x;
+		ap_ufixed<22,12> ctrl_x_i = ap_ufixed<22,12>(KI) * error_x_sum;
+		ap_ufixed<22,12> ctrl_x_d = ap_ufixed<22,12>(KD) * error_x_diff;
+		ap_ufixed<22,12> ctrl_x = ctrl_x_p + ctrl_x_i + ctrl_x_d;
 
 
-		// implement PID controller
-		error = sqrt(p_p_b_x * p_p_b_x + p_p_b_y * p_p_b_y);
-		error_diff = (error - error_last) / delta;
-		error_sum += error * delta;
-		if (error_sum > 100) error_sum = 100;
-		if (error_sum < -100) error_sum = -100;
-		error_last = error;
+		// implement PID controller for x
+		error_y = p_p_b_y;
+		error_y_diff = (error_y - error_y_last) / delta;
+		error_y_sum += error_y * delta;
+		error_y_last = error_y;
 
-#ifndef __SYNTHESIS__
-		printf("error is %f\n", error.to_float());
-#endif
+		ap_ufixed<22,12> ctrl_y_p = ap_ufixed<22,12>(KP) * error_y;
+		ap_ufixed<22,12> ctrl_y_i = ap_ufixed<22,12>(KI) * error_y_sum;
+		ap_ufixed<22,12> ctrl_y_d = ap_ufixed<22,12>(KD) * error_y_diff;
+		ap_ufixed<22,12> ctrl_y = ctrl_y_p + ctrl_y_i + ctrl_y_d;
 
-		ap_ufixed<22,12> ctrl_p = ap_ufixed<22,12>(0.03) * error;
-		ap_ufixed<22,12> ctrl_i = ap_ufixed<22,12>(0) * error_diff;
-		ap_ufixed<22,12> ctrl_d = ap_ufixed<22,12>(0) * error_sum;
-		ap_ufixed<22,12> ctrl = ctrl_p + ctrl_i + ctrl_d;
 
-#ifndef __SYNTHESIS__
-		printf("controlled angle %f (%d)\n", ctrl.to_float(), ctrl.to_int());
-#endif
+		// calculate plate rotation
+		ap_ufixed<22,12> len = sqrt(ctrl_x * ctrl_x + ctrl_y * ctrl_y);
+
+		ap_fixed<10,2> t_p2b_ra_x = -ctrl_y / len;
+		ap_fixed<10,2> t_p2b_ra_y = ctrl_x / len;
 
 		ap_uint<10> cmd_x, cmd_y;
 		// ugly workaround for bit selection
@@ -77,12 +83,13 @@ THREAD_ENTRY() {
 			cmd_x[i] = t_p2b_ra_x[i];
 			cmd_y[i] = t_p2b_ra_y[i];
 		}
-
-		ap_uint<9> cmd_a = ctrl;
+		ap_uint<9> cmd_a = len;
 
 #ifdef __RECONOS__
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 6; i++) {
 			MBOX_PUT(inverse_cmd, (cmd_x, cmd_y, cmd_a, (ap_uint<3>)i));
+		}
+		MBOX_PUT(performance_perf, (ap_uint<8>("11", 16), ap_uint<24>(0)));
 #else
 		return (cmd_x, cmd_y, cmd_a, (ap_uint<3>)0);
 #endif
