@@ -13,7 +13,7 @@ ap_int<10> p_p_j_x[6] = {51,-51,-64,-13,13,64};
 ap_int<10> p_p_j_y[6] = {44,44,22,-66,-66,22};
 
 // transformation to base coordinates
-ap_int<10> t_p2b_t_z = 80 + 21;
+ap_int<10> t_p2b_t_z = 80 + 25;
 
 // transformation to servo coordinates
 ap_fixed<10,2> t_b2s_rz_sin[6] = {0.00000000,0.00000000,-0.86602540,-0.86602540,0.86602540,0.86602540};

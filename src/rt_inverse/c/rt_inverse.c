@@ -16,7 +16,7 @@ int p_p_j_x[6] = {51,-51,-64,-13,13,64};
 int p_p_j_y[6] = {44,44,22,-66,-66,22};
 
 // transformation to base coordinates
-float t_p2b_t_z = 80 + 21;
+float t_p2b_t_z = 80 + 25;
 
 // transformation to servo coordinates
 float t_b2s_rz_sin[6] = {0.00000000,0.00000000,-0.86602540,-0.86602540,0.86602540,0.86602540};
@@ -56,6 +56,7 @@ THREAD_ENTRY() {
 
 	while (1) {
 		uint32_t data = MBOX_GET(inverse_cmd);
+		MBOX_PUT(performance_perf, 0x20000000 | (data & 0x7));
 
 		float t_p2b_ra_x = fitofl((data >> 22) & 0x3ff, 10, 2);
 		float t_p2b_ra_y = fitofl((data >> 12) & 0x3ff, 10, 2);
@@ -135,5 +136,6 @@ THREAD_ENTRY() {
 		debug("angle %d with length diff %f", v_s_aj_l_mina, v_s_aj_l_min);
 
 		MBOX_PUT(servo_cmd, ((v_s_aj_l_mina << 21) | (leg << 18) | 0));
+		MBOX_PUT(performance_perf, 0x21000000 | (data & 0x7));
 	}
 }
