@@ -47,12 +47,13 @@ architecture implementation of rt_touch is
 	signal i_memif : i_memif_t;
 	signal o_memif : o_memif_t;
 
-	--constant C_MEDIAN_COUNT : integer := 3;
+	constant C_AVG_COUNT     : integer := 4;
+	constant C_AVG_COUNT_LOG : integer := 2;
 
 	type STATE_TYPE is (STATE_THREAD_INIT, STATE_INIT_DATA,
-	                    STATE_WAIT, STATE_CTRL, STATE_IRQ,
-	                    STATE_START_X, STATE_READ_X,
-	                    STATE_START_Y, STATE_READ_Y,
+	                    STATE_WAIT, STATE_CTRL, STATE_IRQ_START, STATE_IRQ_END,
+	                    STATE_START_X, STATE_READ_X, STATE_AVG_X,
+	                    STATE_START_Y, STATE_READ_Y, STATE_AVG_Y,
 	                    STATE_POS, STATE_SCALE,
 	                    STATE_STORE_POS, STATE_STORE_DELTA,
 	                    STATE_SAW, STATE_PERF_BEGIN, STATE_PERF_END);
@@ -65,13 +66,14 @@ architecture implementation of rt_touch is
 	signal sm_start, sm_ready   : std_logic;
 	signal sm_txdata, sm_rxdata : std_logic_vector(23 downto 0);
 	
-	signal wait_count :  unsigned(23 downto 0);
+	signal wait_count : unsigned(23 downto 0);
+	signal irq_count  : unsigned(23 downto 0);
 
-	--type T_POS_ARRAY is array (0 to C_MEDIAN_COUNT - 1) of std_logic_vector(11 downto 0);
-	signal x_pos, y_pos : std_logic_vector(11 downto 0);--T_POS_ARRAY := (others => (others => '0'));
-	--signal pos_count    : integer range 0 to C_MEDIAN_COUNT - 1;
+	signal x_pos_sum, y_pos_sum : unsigned(11 + C_AVG_COUNT_LOG downto 0);
+	signal pos_sum_count        : unsigned(C_AVG_COUNT_LOG downto 0);
 
-	signal x_pos_s, y_pos_s : std_logic_vector(11 downto 0);
+	signal x_pos_avg, y_pos_avg : std_logic_vector(11 downto 0);
+	signal x_pos_s, y_pos_s     : std_logic_vector(11 downto 0);
 
 	signal ctrl_wait : unsigned(23 downto 0);
 	signal ctrl_avg : std_logic_vector(3 downto 0);
@@ -92,21 +94,11 @@ architecture implementation of rt_touch is
 			ap_ready : out std_logic;
 
 			x_u_V        : in std_logic_vector (11 downto 0);
-			--x_u_1_V      : in std_logic_vector (11 downto 0);
-			--x_u_2_V      : in std_logic_vector (11 downto 0);
-			--x_u_3_V      : in std_logic_vector (11 downto 0);
-			--x_u_4_V      : in std_logic_vector (11 downto 0);
 			y_u_V        : in std_logic_vector (11 downto 0);
-			--y_u_1_V      : in std_logic_vector (11 downto 0);
-			--y_u_2_V      : in std_logic_vector (11 downto 0);
-			--y_u_3_V      : in std_logic_vector (11 downto 0);
-			--y_u_4_V      : in std_logic_vector (11 downto 0);
 			x_s_V        : out std_logic_vector (11 downto 0);
 			x_s_V_ap_vld : out std_logic;
 			y_s_V        : out std_logic_vector (11 downto 0);
-			y_s_V_ap_vld : out std_logic;
-
-			average_V    : in std_logic_vector(3 downto 0)
+			y_s_V_ap_vld : out std_logic
 		);
 	end component;
 begin
@@ -139,8 +131,8 @@ begin
 			osif_reset(o_osif);
 			memif_reset(o_memif);
 
-			wait_count <= (others => '0');
-			--pos_count <= 0;
+			wait_count    <= (others => '0');
+			pos_sum_count <= (others => '0');
 
 			state <= STATE_THREAD_INIT;
 		elsif rising_edge(HWT_Clk) then
@@ -168,37 +160,65 @@ begin
 						ctrl_wait <= unsigned(ret(23 downto 0));
 						ctrl_avg  <= ret(27 downto 24);
 
+						x_pos_sum <= (others => '0');
+						y_pos_sum <= (others => '0');
+
 						state <= STATE_WAIT;
 					end if;
 
 				when STATE_WAIT =>
 					if wait_count = ctrl_wait then
-						state <= STATE_IRQ;
-					end if;
-
-				when STATE_IRQ =>
-					if irq_s_0 = '0' then
-						wait_count <= (others => '0');
 						state <= STATE_PERF_BEGIN;
-					else
-						ctrl_wait <= ctrl_wait + 1;
 					end if;
 
 				when STATE_PERF_BEGIN =>
+					ctrl_wait <= ctrl_wait + 1;
+
 					MBOX_PUT(i_osif, o_osif, performance_perf, x"00000000", ignore, done);
 					if done then
+						irq_count <= (others => '0');
+						state <= STATE_IRQ_START;
+					end if;
+
+				when STATE_IRQ_START =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					if irq_s_0 = '0' then
+						irq_count <= irq_count + 1;
+					else
+						irq_count <= (others => '0');
+					end if;
+
+					if irq_count = 1818 then
 						state <= STATE_START_X;
 					end if;
 
 				when STATE_START_X =>
+					ctrl_wait <= ctrl_wait + 1;
+
 					state <= STATE_READ_X;
 
 				when STATE_READ_X =>
-					if sm_ready = '1' then
-						--x_pos(pos_count) <= sm_rxdata(14 downto 3);
-						x_pos <= sm_rxdata(14 downto 3);
+					ctrl_wait <= ctrl_wait + 1;
 
+					if sm_ready = '1' then
+						if pos_sum_count /= 0 then
+							x_pos_sum <= x_pos_sum + unsigned(sm_rxdata(14 downto 3));
+						end if;
+
+						state <= STATE_AVG_X;
+					end if;
+
+				when STATE_AVG_X =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					pos_sum_count <= pos_sum_count + 1;
+
+					if pos_sum_count = C_AVG_COUNT then
+						pos_sum_count <= (others => '0');
 						state <= STATE_START_Y;
+					else
+						state <= STATE_START_X;
 					end if;
 
 				when STATE_START_Y =>
@@ -206,24 +226,35 @@ begin
 
 				when STATE_READ_Y =>
 					if sm_ready = '1' then
-						--y_pos(pos_count) <= sm_rxdata(14 downto 3);
-						y_pos <= sm_rxdata(14 downto 3);
+						if pos_sum_count /= 0 then
+							y_pos_sum <= y_pos_sum + unsigned(sm_rxdata(14 downto 3));
+						end if;
 
-						state <= STATE_SCALE;
+						state <= STATE_AVG_Y;
 					end if;
 
-				--when STATE_POS =>
-				--	if pos_count = C_MEDIAN_COUNT - 1 then
-				--		pos_count <= 0;
-				--		state <= STATE_SCALE;
-				--	else
-				--		pos_count <= pos_count + 1;
-				--		state <= STATE_START_X;
-				--	end if;
+				when STATE_AVG_Y =>
+					pos_sum_count <= pos_sum_count + 1;
+
+					if pos_sum_count = C_AVG_COUNT then
+						pos_sum_count <= (others => '0');
+						state <= STATE_IRQ_END;
+					else
+						state <= STATE_START_Y;
+					end if;
+
+				when STATE_IRQ_END =>
+					if irq_s_0 = '0' then
+						state <= STATE_SCALE;
+						wait_count <= (others => '0');
+					else
+						irq_count <= (others => '0');
+						state <= STATE_IRQ_START;
+					end if;
 
 				when STATE_SCALE =>
 					if scale_done = '1' then
-						state <= STATE_STORE_POS;
+						state <= STATE_PERF_END;
 					end if;
 
 					if scale_x_pos_s_vld = '1' then
@@ -232,6 +263,12 @@ begin
 
 					if scale_y_pos_s_vld = '1' then
 						y_pos_s <= scale_y_pos_s;
+					end if;
+
+				when STATE_PERF_END =>
+					MBOX_PUT(i_osif, o_osif, performance_perf, x"01000000", ignore, done);
+					if done then
+						state <= STATE_STORE_POS;
 					end if;
 
 				when STATE_STORE_POS =>
@@ -244,12 +281,6 @@ begin
 				when STATE_STORE_DELTA =>
 					MBOX_PUT(i_osif, o_osif, touch_pos, x"00" & std_logic_vector(ctrl_wait), ignore, done);
 
-					if done then
-						state <= STATE_PERF_END;
-					end if;
-
-				when STATE_PERF_END =>
-					MBOX_PUT(i_osif, o_osif, performance_perf, x"01000000", ignore, done);
 					if done then
 						state <= STATE_SAW;
 					end if;
@@ -265,6 +296,9 @@ begin
 			end case;
 		end if;
 	end process osfsm_proc;
+
+	x_pos_avg <= std_logic_vector(x_pos_sum(11 + C_AVG_COUNT_LOG downto C_AVG_COUNT_LOG));
+	y_pos_avg <= std_logic_vector(y_pos_sum(11 + C_AVG_COUNT_LOG downto C_AVG_COUNT_LOG));
 
 	sync_proc : process(HWT_Clk) is
 	begin
@@ -288,14 +322,16 @@ begin
 	--                         0   1    = power down without penirq
 	--                         1   0    = reserved
 	--                         1   1    = no power down
-	sm_txdata <= "11010000" & x"0000" when state = STATE_START_X else
-	             "10010000" & x"0000" when state = STATE_START_Y else
+	sm_txdata <= "11010000" & x"00" & "00000000" when state = STATE_START_X and pos_sum_count = C_AVG_COUNT else
+	             "11010000" & x"00" & "11010000" when state = STATE_START_X else
+	             "10010000" & x"00" & "00000000" when state = STATE_START_Y and pos_sum_count = C_AVG_COUNT else
+	             "10010000" & x"00" & "10010000" when state = STATE_START_Y else
 	             (others => '0');
 
 	sm_inst : entity rt_touch_v1_00_a.spi_master
 		generic map (
 			G_SM_CLK_PRD  => 10ns,
-			G_SPI_CLK_PRD => 24000ns,
+			G_SPI_CLK_PRD => 800ns,
 
 			G_DATA_LEN => 24
 		)
@@ -322,21 +358,12 @@ begin
 			ap_done  => scale_done,
 			ap_idle  => scale_idle,
 			ap_ready => scale_ready,
-			x_u_V => x_pos,
-			--x_u_1_V => x_pos(1),
-			--x_u_2_V => x_pos(2),
-			--x_u_3_V => x_pos(3),
-			--x_u_4_V => x_pos(4),
-			y_u_V => y_pos,
-			--y_u_1_V => y_pos(1),
-			--y_u_2_V => y_pos(2),
-			--y_u_3_V => y_pos(3),
-			--y_u_4_V => y_pos(4),
+			x_u_V => x_pos_avg,
+			y_u_V => y_pos_avg,
 			x_s_V => scale_x_pos_s,
 			x_s_V_ap_vld => scale_x_pos_s_vld,
 			y_s_V => scale_y_pos_s,
-			y_s_V_ap_vld => scale_y_pos_s_vld,
-			average_V => ctrl_avg
+			y_s_V_ap_vld => scale_y_pos_s_vld
 		);
 
 end architecture;
