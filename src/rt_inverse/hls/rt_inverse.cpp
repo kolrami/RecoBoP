@@ -152,10 +152,16 @@ ap_uint<32> inverse(ap_uint<32> data) {
 #endif
 
 #ifdef __RECONOS__
-		MBOX_PUT(servo_cmd, (v_s_aj_l_mina, cmd_l, ap_uint<18>(0)));
 		MBOX_PUT(performance_perf, (ap_uint<8>("21", 16), ap_uint<21>(0), data(2, 0)));
+		MBOX_PUT(servo_cmd, (v_s_aj_l_mina, cmd_l, ap_uint<18>(0)));
 #else
 		return (v_s_aj_l_mina, cmd_l, ap_uint<18>(0));
+#endif
+
+#ifdef __RECONOS__
+		if (THREAD_SIGNAL()) {
+			THREAD_EXIT();
+		}
 #endif
 
 #ifdef __RECONOS__

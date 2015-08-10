@@ -135,7 +135,12 @@ THREAD_ENTRY() {
 
 		debug("angle %d with length diff %f", v_s_aj_l_mina, v_s_aj_l_min);
 
-		MBOX_PUT(servo_cmd, ((v_s_aj_l_mina << 21) | (leg << 18) | 0));
 		MBOX_PUT(performance_perf, 0x21000000 | (data & 0x7));
+		MBOX_PUT(servo_cmd, ((v_s_aj_l_mina << 21) | (leg << 18) | 0));
+
+		if (THREAD_SIGNAL()) {
+			printf("Inverse exiting ...\n");
+			THREAD_EXIT();
+		}
 	}
 }
