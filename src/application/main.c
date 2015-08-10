@@ -35,6 +35,7 @@ int main(int argc, char **argv) {
 	uint32_t m = 0xffffffff;
 	int pos_x, pos_y;
 	char line[128];
+	struct reconos_thread *rt;
 	printf("Hello World\n");
 	printf("int is %d and float is %d\n", sizeof(int), sizeof(float));
 
@@ -46,7 +47,7 @@ int main(int argc, char **argv) {
 	signal(SIGABRT, exit_signal);
 
 	printf("Initializing Info\n");
-	rb_info.ctrl_touch_wait = 2000000 | 0x01000000;
+	rb_info.ctrl_touch_wait = 1000000;
 
 	reconos_thread_createi_hwt_performance((void *)&rb_info);
 	reconos_thread_createi_hwt_servo((void *)&rb_info);
@@ -56,12 +57,13 @@ int main(int argc, char **argv) {
 	reconos_thread_createi_hwt_inverse((void *)&rb_info);
 	reconos_thread_createi_hwt_touch((void *)&rb_info);
 	//reconos_thread_createi_hwt_vga((void *)&rb_info);
-	//reconos_thread_createi_swt_web((void *)&rb_info);
+	reconos_thread_createi_swt_web((void *)&rb_info);
 	reconos_thread_createi_swt_power((void *)&rb_info);
+	reconos_thread_createi_swt_saw((void *)&rb_info);
 
 #if 0
 	while (1) {
-		printf("%f\n", rb_info.perf_control / 100000.0);
+		printf("%f\n", rbi_saw_power(&rb_info));
 		usleep(50000);
 	}
 #endif
@@ -102,7 +104,9 @@ int main(int argc, char **argv) {
 	}
 #endif
 
-	while(1);
+	while(1) {
+		sleep(1000);
+	}
 
 	reconos_cleanup();
 	reconos_app_cleanup();

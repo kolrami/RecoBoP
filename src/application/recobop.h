@@ -40,6 +40,26 @@ static inline int rbi_saw_pos_y(struct recobop_info *rb_info) {
 	return pos_y;
 }
 
+static inline float rbi_perf_touch(struct recobop_info *rb_info) {
+	//printf("%f\n", rb_info->perf_touch / 100000.0);
+	return rb_info->perf_touch / 100000.0;
+}
+
+static inline float rbi_perf_control(struct recobop_info *rb_info) {
+	//printf("%f\n", rb_info->perf_control / 100000.0);
+	return rb_info->perf_control / 100000.0;
+}
+
+static inline float rbi_perf_inverse(struct recobop_info *rb_info) {
+	//printf("%f\n", rb_info->perf_inverse / 100000.0);
+	return rb_info->perf_inverse / 100000.0;
+}
+
+static inline float rbi_perf_overhead(struct recobop_info *rb_info) {
+	//printf("%f\n", rb_info->perf_all / 100000.0);
+	return (rb_info->perf_all - rb_info->perf_touch - rb_info->perf_control - rb_info->perf_inverse) / 100000.0;
+}
+
 static inline uint32_t fltofi(float f, int n, int dn) {
 	int i;
 	int wn = n - dn;
