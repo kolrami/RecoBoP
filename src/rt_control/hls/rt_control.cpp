@@ -11,6 +11,19 @@
 #define KI -0.00004
 #define KD -25
 
+#define MC 8
+#define MCL 3
+
+static ap_fixed<22,12> average(ap_fixed<22,12> *data) {
+	ap_fixed<22 + MCL,15 + MCL> sum = 0;
+
+	for (int i = 0; i < MC; i++) {
+		sum += data[i];
+	}
+
+	return sum / MC;
+}
+
 #ifdef __RECONOS__
 THREAD_ENTRY() {
 	THREAD_INIT();
@@ -18,8 +31,10 @@ THREAD_ENTRY() {
 	ap_uint<32> control(ap_uint<32> pos, ap_uint<32> wait) {
 #endif
 
-	ap_ufixed<22,12> error_x, error_x_last, error_x_diff, error_x_sum = 0;
-	ap_ufixed<22,12> error_y, error_y_last, error_y_diff, error_y_sum = 0;
+	ap_fixed<22,12> error_x, error_x_last, error_x_diff, error_x_sum = 0;
+	ap_fixed<22,12> error_y, error_y_last, error_y_diff, error_y_sum = 0;
+
+	ap_fixed<22,12> error_x_diff_m[MC], error_y_diff_m[MC];
 
 #ifdef __RECONOS__
 	while (1) {
@@ -53,22 +68,38 @@ THREAD_ENTRY() {
 		error_x_sum += error_x * delta;
 		error_x_last = error_x;
 
-		ap_ufixed<22,12> ctrl_x_p = ap_ufixed<22,12>(KP) * error_x;
-		ap_ufixed<22,12> ctrl_x_i = ap_ufixed<22,12>(KI) * error_x_sum;
-		ap_ufixed<22,12> ctrl_x_d = ap_ufixed<22,12>(KD) * error_x_diff;
-		ap_ufixed<22,12> ctrl_x = ctrl_x_p + ctrl_x_i + ctrl_x_d;
+		for (int i = MC - 1; i > 0; i--) {
+			error_x_diff_m[i] = error_x_diff_m[i - 1];
+			error_x_diff_m[i] = error_x_diff_m[i - 1];
+		}
+		error_x_diff_m[0] = error_x_diff;
+		error_x_diff_m[0] = error_x_diff;
+		error_x_diff = average(error_x_diff_m);
+
+		ap_fixed<22,12> ctrl_x_p = ap_fixed<22,12>(KP) * error_x;
+		ap_fixed<22,12> ctrl_x_i = ap_fixed<22,12>(KI) * error_x_sum;
+		ap_fixed<22,12> ctrl_x_d = ap_fixed<22,12>(KD) * error_x_diff;
+		ap_fixed<22,12> ctrl_x = ctrl_x_p + ctrl_x_i + ctrl_x_d;
 
 
-		// implement PID controller for x
+		// implement PID controller for y
 		error_y = p_p_b_y;
 		error_y_diff = (error_y - error_y_last) / delta;
 		error_y_sum += error_y * delta;
 		error_y_last = error_y;
 
-		ap_ufixed<22,12> ctrl_y_p = ap_ufixed<22,12>(KP) * error_y;
-		ap_ufixed<22,12> ctrl_y_i = ap_ufixed<22,12>(KI) * error_y_sum;
-		ap_ufixed<22,12> ctrl_y_d = ap_ufixed<22,12>(KD) * error_y_diff;
-		ap_ufixed<22,12> ctrl_y = ctrl_y_p + ctrl_y_i + ctrl_y_d;
+		for (int i = MC - 1; i > 0; i--) {
+			error_y_diff_m[i] = error_y_diff_m[i - 1];
+			error_y_diff_m[i] = error_y_diff_m[i - 1];
+		}
+		error_y_diff_m[0] = error_y_diff;
+		error_y_diff_m[0] = error_y_diff;
+		error_y_diff = average(error_y_diff_m);
+
+		ap_fixed<22,12> ctrl_y_p = ap_fixed<22,12>(KP) * error_y;
+		ap_fixed<22,12> ctrl_y_i = ap_fixed<22,12>(KI) * error_y_sum;
+		ap_fixed<22,12> ctrl_y_d = ap_fixed<22,12>(KD) * error_y_diff;
+		ap_fixed<22,12> ctrl_y = ctrl_y_p + ctrl_y_i + ctrl_y_d;
 
 
 		// calculate plate rotation
@@ -86,10 +117,10 @@ THREAD_ENTRY() {
 		ap_uint<9> cmd_a = len;
 
 #ifdef __RECONOS__
+		MBOX_PUT(performance_perf, (ap_uint<8>("11", 16), ap_uint<24>(0)));
 		for (int i = 0; i < 6; i++) {
 			MBOX_PUT(inverse_cmd, (cmd_x, cmd_y, cmd_a, (ap_uint<3>)i));
 		}
-		MBOX_PUT(performance_perf, (ap_uint<8>("11", 16), ap_uint<24>(0)));
 #else
 		return (cmd_x, cmd_y, cmd_a, (ap_uint<3>)0);
 #endif
