@@ -96,6 +96,7 @@ begin
 		variable resume, done : boolean;
 
 		variable rt_inverse_begin_leg, rt_inverse_end_leg : std_logic_vector(5 downto 0) := (others => '0');
+		variable rt_servo_leg : std_logic_vector(5 downto 0) := (others => '0');
 	begin
 		if HWT_Rst = '1' then
 			osif_reset(o_osif);
@@ -103,6 +104,8 @@ begin
 
 			rt_inverse_begin_leg := (others => '0');
 			rt_inverse_end_leg   := (others => '0');
+
+			rt_servo_leg := (others => '0');
 
 			state <= STATE_THREAD_INIT;
 		elsif rising_edge(HWT_Clk) then
@@ -140,7 +143,7 @@ begin
 							MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 20), std_logic_vector(perf_cnt - rt_touch_begin), done);
 
 						when C_RT_CONTROL & C_PC_BEGIN =>
-							rt_control_begin <= perf_cnt;
+							rt_control_begin <= perf_cnt;				
 							done := true;
 
 						when C_RT_CONTROL & C_PC_END =>
@@ -152,6 +155,7 @@ begin
 								rt_inverse_begin <= perf_cnt;
 
 								rt_inverse_end_leg := (others => '0');
+								rt_servo_leg       := (others => '0');
 							end if;
 							rt_inverse_begin_leg(to_integer(unsigned(perf_cmd(2 downto 0)))) := '1';
 							done := true;
@@ -170,8 +174,11 @@ begin
 							done := true;
 
 						when C_RT_SERVO & C_PC_END =>
-							rt_servo_end <= perf_cnt;
-							MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 32), std_logic_vector(perf_cnt - rt_touch_end), done);
+							rt_servo_leg(to_integer(unsigned(perf_cmd(2 downto 0)))) := '1';
+							if rt_servo_leg = "111111" then
+								rt_servo_end <= perf_cnt;
+								MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 32), std_logic_vector(perf_cnt - rt_touch_begin), done);
+							end if;
 
 						when others =>
 							done := true;

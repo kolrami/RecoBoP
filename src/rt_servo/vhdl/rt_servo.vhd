@@ -137,7 +137,7 @@ begin
 					state <= STATE_PERF;
 
 				when STATE_PERF =>
-					MBOX_PUT(i_osif, o_osif, performance_perf, x"31000000", ignore, done);
+					MBOX_PUT(i_osif, o_osif, performance_perf, x"3100000" & "0" & cmd(C_LEG_RANGE), ignore, done);
 					if done then
 						state <= STATE_CMD;
 					end if;
