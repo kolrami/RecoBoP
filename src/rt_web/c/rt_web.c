@@ -13,9 +13,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include <errno.h>
+
 #define HEADER_COUNT_MAX 2048
 #define INDEX_COUNT_MAX  20480
 #define BUF_COUNT_MAX    2048
+
 
 THREAD_ENTRY() {
 	int server_sock, client_sock;
@@ -45,7 +48,7 @@ THREAD_ENTRY() {
 	}
 
 	if (bind(server_sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_in))) {
-		panic("Failed to bind socket");
+		panic("Failed to bind socket %d\n", errno);
 
 		close(server_sock);
 	}
@@ -75,14 +78,26 @@ THREAD_ENTRY() {
 		send(client_sock, "HTTP/1.1 200 OK\n\n", 17, 0);
 		if (!strncmp(header, "GET / ", 6)) {
 			send(client_sock, index, index_count, 0);
-		} else if (!strncmp(header, "GET /saw_pos/x ", 15)) {
+		} else if (!strncmp(header, "GET /saw/pos/x ", 15)) {
 			buf_count = snprintf(buf, 1024, "%d", rbi_saw_pos_x(rb_info));
 			send(client_sock, buf, buf_count, 0);
-		} else if (!strncmp(header, "GET /saw_pos/y ", 15)) {
+		} else if (!strncmp(header, "GET /saw/pos/y ", 15)) {
 			buf_count = snprintf(buf, 1024, "%d", rbi_saw_pos_y(rb_info));
 			send(client_sock, buf, buf_count, 0);
-		} else if (!strncmp(header, "GET /saw_vsense ", 16)) {
+		} else if (!strncmp(header, "GET /saw/vsense ", 16)) {
 			buf_count = snprintf(buf, 1024, "%f", rbi_saw_power(rb_info));
+			send(client_sock, buf, buf_count, 0);
+		} else if (!strncmp(header, "GET /perf/touch ", 16)) {
+			buf_count = snprintf(buf, 1024, "%f", rbi_perf_touch(rb_info));
+			send(client_sock, buf, buf_count, 0);
+		} else if (!strncmp(header, "GET /perf/control ", 18)) {
+			buf_count = snprintf(buf, 1024, "%f", rbi_perf_control(rb_info));
+			send(client_sock, buf, buf_count, 0);
+		} else if (!strncmp(header, "GET /perf/inverse ", 18)) {
+			buf_count = snprintf(buf, 1024, "%f", rbi_perf_inverse(rb_info));
+			send(client_sock, buf, buf_count, 0);
+		} else if (!strncmp(header, "GET /perf/overhead ", 19)) {
+			buf_count = snprintf(buf, 1024, "%f", rbi_perf_overhead(rb_info));
 			send(client_sock, buf, buf_count, 0);
 		}
 
