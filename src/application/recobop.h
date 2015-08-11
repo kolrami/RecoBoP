@@ -1,8 +1,11 @@
 #ifndef RECOBOP_H
 #define RECOBOP_H
 
+#include "reconos.h"
+
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 struct recobop_info {
 	float saw_vin;
@@ -16,6 +19,9 @@ struct recobop_info {
 	uint32_t perf_control;
 	uint32_t perf_inverse;
 	uint32_t perf_all;
+
+	int thread_count;
+	struct reconos_thread *thread_p[16];
 };
 
 static inline float rbi_saw_power(struct recobop_info *rb_info) {
@@ -58,6 +64,68 @@ static inline float rbi_perf_inverse(struct recobop_info *rb_info) {
 static inline float rbi_perf_overhead(struct recobop_info *rb_info) {
 	//printf("%f\n", rb_info->perf_all / 100000.0);
 	return (rb_info->perf_all - rb_info->perf_touch - rb_info->perf_control - rb_info->perf_inverse) / 100000.0;
+}
+
+static inline int rbi_thread_count_m(struct recobop_info *rb_info,
+                                     char *thread_name, int thread_mode) {
+	int i, count = 0;
+	struct reconos_thread *rt;
+
+	for (i = 0; i < 16; i++) {
+		rt = rb_info->thread_p[i];
+		if (!rt) {
+			continue;
+		}
+
+		if (strcmp(thread_name, rt->name) == 0)
+			if (   (  rt->state == RECONOS_THREAD_STATE_RUNNING_HW
+				    && thread_mode == RECONOS_THREAD_MODE_HW)
+			    || (  rt->state == RECONOS_THREAD_STATE_RUNNING_SW
+			    	&& thread_mode == RECONOS_THREAD_MODE_SW)) {
+				count++;
+			}
+	}
+
+	return count;
+}
+
+static inline int rbi_thread_count(struct recobop_info *rb_info,
+                                   char *thread_name) {
+	return   rbi_thread_count_m(rb_info, thread_name, RECONOS_THREAD_MODE_SW)
+	       + rbi_thread_count_m(rb_info, thread_name, RECONOS_THREAD_MODE_HW);
+}
+
+static inline int rbi_thread_index(struct recobop_info *rb_info,
+                                   char *thread_name, int thread_mode) {
+	int i;
+	struct reconos_thread *rt;
+
+	for (i = 0; i < 16; i++) {
+		rt = rb_info->thread_p[i];
+		if (!rt) {
+			continue;
+		}
+
+		if (   strcmp(thread_name, rt->name) == 0 
+			&& rt->state == RECONOS_THREAD_STATE_RUNNING_HW
+			&& thread_mode == RECONOS_THREAD_MODE_HW) {
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+static inline int rbi_thread_index_free(struct recobop_info *rb_info) {
+	int i;
+
+	for (i = 0; i < 16; i++) {
+		if (!rb_info->thread_p[i]) {
+			return i;
+		}
+	}
+
+	return -1;
 }
 
 static inline uint32_t fltofi(float f, int n, int dn) {

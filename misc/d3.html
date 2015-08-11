@@ -28,6 +28,8 @@ h1 {font-weight: 100; }
 <svg id="saw_vsense" />
 <svg id="saw_pos" />
 <svg id="perf" />
+<input type="button" value="Stop Hw Inverse" onclick="javascript:post('/thread/inverse/hw/stop')"/>
+<input type="button" value="Start Hw Inverse" onclick="javascript:post('/thread/inverse/hw/start')"/>
 
 <script type="text/javascript">
 function getTime() {
@@ -84,7 +86,7 @@ function saw_vsense_init() {
 	saw_vsense_xaxis_scale.range([0, saw_vsense_width - 2 * saw_vsense_padding]);
 
 	saw_vsense_yaxis_scale = d3.scale.linear();
-	saw_vsense_yaxis_scale.domain([3.6, 3.3]);
+	saw_vsense_yaxis_scale.domain([3.6, 3.1]);
 	saw_vsense_yaxis_scale.range([0, saw_vsense_height - 2 * saw_vsense_padding]);
 
 	var xaxis = d3.svg.axis().orient("bottom").scale(saw_vsense_xaxis_scale);
@@ -139,11 +141,11 @@ function saw_pos_init() {
 	d3.select("#saw_pos").select(".graph").select("#pos").append("text").attr("x", 5).attr("y", 5).text("Hello World");
 
 	saw_pos_xaxis_scale = d3.scale.linear();
-	saw_pos_xaxis_scale.domain([-2048, 2048]);
+	saw_pos_xaxis_scale.domain([-1500, 1500]);
 	saw_pos_xaxis_scale.range([-saw_pos_width / 2 + saw_pos_padding, saw_pos_width / 2 - saw_pos_padding]);
 
 	saw_pos_yaxis_scale = d3.scale.linear();
-	saw_pos_yaxis_scale.domain([2048, -2048]);
+	saw_pos_yaxis_scale.domain([1500, -1500]);
 	saw_pos_yaxis_scale.range([-saw_pos_height / 2 + saw_pos_padding, saw_pos_height / 2 - saw_pos_padding]);
 
 	var xaxis = d3.svg.axis().orient("bottom").scale(saw_pos_xaxis_scale);
@@ -236,6 +238,14 @@ function perf_init() {
 	d3.select("#perf").select(".yaxis").attr("transform", "translate(" + perf_padding + "," + perf_padding + ")");
 }
 
+</script>
+
+<script type="text/javascript">
+function post(url) {
+	var request = new XMLHttpRequest();
+	request.open("PUT", url, false);
+	request.send(null);
+}
 </script>
 
 <script type="text/javascript">

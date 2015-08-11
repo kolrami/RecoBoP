@@ -49,17 +49,17 @@ int main(int argc, char **argv) {
 	printf("Initializing Info\n");
 	rb_info.ctrl_touch_wait = 1000000;
 
-	reconos_thread_createi_hwt_performance((void *)&rb_info);
-	reconos_thread_createi_hwt_servo((void *)&rb_info);
-	reconos_thread_createi_swt_control((void *)&rb_info);
-	reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	reconos_thread_createi_hwt_touch((void *)&rb_info);
-	//reconos_thread_createi_hwt_vga((void *)&rb_info);
-	reconos_thread_createi_swt_web((void *)&rb_info);
-	reconos_thread_createi_swt_power((void *)&rb_info);
-	reconos_thread_createi_swt_saw((void *)&rb_info);
+	rb_info.thread_p[0] = reconos_thread_createi_hwt_performance((void *)&rb_info);
+	rb_info.thread_p[1] = reconos_thread_createi_hwt_servo((void *)&rb_info);
+	rb_info.thread_p[2] = reconos_thread_createi_swt_control((void *)&rb_info);
+	rb_info.thread_p[3] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	rb_info.thread_p[4] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	rb_info.thread_p[5] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	rb_info.thread_p[6] = reconos_thread_createi_hwt_touch((void *)&rb_info);
+	//rb_info.thread_p[7] = reconos_thread_createi_hwt_vga((void *)&rb_info);
+	//rb_info.thread_p[7] = reconos_thread_createi_swt_web((void *)&rb_info);
+	rb_info.thread_p[8] = reconos_thread_createi_swt_power((void *)&rb_info);
+	//rb_info.thread_p[9] = reconos_thread_createi_swt_saw((void *)&rb_info);
 
 #if 0
 	while (1) {
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 #endif
 
 	while(1) {
-		sleep(1000);
+		sleep(1000000000);
 	}
 
 	reconos_cleanup();
