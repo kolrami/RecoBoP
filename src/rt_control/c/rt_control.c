@@ -7,12 +7,13 @@
 #include <math.h>
 #include <stdio.h>
 
-#define KP -0.09
-#define KI -0.00004
-#define KD -28
+//#define KP -0.09
+//#define KI -0.00004
+#define KI 0
+#define KD -32
 
 #define MC 16
-#define MCL 3
+#define MCL 4
 
 static float average(float *data) {
 	int i;
@@ -25,6 +26,29 @@ static float average(float *data) {
 	return sum / MC;
 }
 
+static float median(float *data) {
+	int i, j;
+	float tmp;
+	float copy[MC];
+	float sum = 0;
+
+	for (i = 0; i < MC; i++) {
+		copy[i] = data[i];
+	}
+
+	for (i = 0; i < MC; i++) {
+		for (j = 0; j < MC - 1; j++) {
+			if (copy[j] > copy[j + 1]) {
+				tmp = copy[j];
+				copy[j] = copy[j + 1];
+				copy[j + 1] = tmp;
+			}
+		}
+	}
+
+	return copy[MC / 2];
+}
+
 THREAD_ENTRY() {
 	int i;
 
@@ -32,6 +56,10 @@ THREAD_ENTRY() {
 
 	float error_x = 0, error_x_last = 0, error_x_diff = 0, error_x_sum = 0;
 	float error_y = 0, error_y_last = 0, error_y_diff = 0, error_y_sum = 0;
+
+	float p_p_b_x_last = 0, p_p_b_y_last = 0;
+
+	float delta_off = 0;
 
 	float error_x_diff_m[MC], error_y_diff_m[MC];
 
@@ -54,12 +82,14 @@ THREAD_ENTRY() {
 		debug("position of ball on plate %d %d", p_p_b_x, p_p_b_y);
 		//printf("position of ball on plate %d %d\n", p_p_b_x, p_p_b_y);
 
+		// calculate errors
+		error_x = p_p_b_x;
+		error_y = p_p_b_y;
+
 
 		// implement PID controller for x
-		error_x = p_p_b_x;
-		error_x_diff = (error_x - error_x_last) / delta;
+		error_x_diff = (p_p_b_x - p_p_b_x_last) / delta;
 		error_x_sum += error_x * delta;
-		error_x_last = error_x;
 
 		for (i = MC - 1; i > 0; i--) {
 			error_x_diff_m[i] = error_x_diff_m[i - 1];
@@ -76,10 +106,8 @@ THREAD_ENTRY() {
 
 
 		// implement PID controller for y
-		error_y = p_p_b_y;
-		error_y_diff = (error_y - error_y_last) / delta;
+		error_y_diff = (p_p_b_y - p_p_b_y_last) / delta;
 		error_y_sum += error_y * delta;
-		error_y_last = error_y;
 
 		for (i = MC - 1; i > 0; i--) {
 			error_y_diff_m[i] = error_y_diff_m[i - 1];
@@ -93,6 +121,13 @@ THREAD_ENTRY() {
 		float ctrl_y_i = KI* error_y_sum;
 		float ctrl_y_d = KD * error_y_diff;
 		float ctrl_y = ctrl_y_p + ctrl_y_i + ctrl_y_d;
+
+
+		// store last errors
+		error_x_last = error_x;
+		error_y_last = error_y;
+		p_p_b_x_last = p_p_b_x;
+		p_p_b_y_last = p_p_b_y;
 
 		
 		// calculate plate rotation
