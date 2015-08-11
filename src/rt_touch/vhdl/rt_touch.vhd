@@ -63,8 +63,8 @@ architecture implementation of rt_touch is
 
 	signal rb_info : unsigned(31 downto 0);
 
-	signal sm_start, sm_ready   : std_logic;
-	signal sm_txdata, sm_rxdata : std_logic_vector(23 downto 0);
+	signal sm_start, sm_ready, sm_conti : std_logic;
+	signal sm_txdata, sm_rxdata         : std_logic_vector(23 downto 0);
 	
 	signal wait_count : unsigned(23 downto 0);
 	signal irq_count  : unsigned(23 downto 0);
@@ -189,7 +189,7 @@ begin
 						irq_count <= (others => '0');
 					end if;
 
-					if irq_count = 1818 then
+					if irq_count = 9999 then
 						state <= STATE_START_X;
 					end if;
 
@@ -311,6 +311,8 @@ begin
 	sm_start <= '1' when state = STATE_START_X else
 	            '1' when state = STATE_START_Y else
 	            '0';
+	sm_conti <= '0' when pos_sum_count = C_AVG_COUNT else
+	            '1';
 	-- Start A2 A1 A0 Mode SER PD1 PD0
 	--       0  0  1                    = y pos
 	--       1  0  1                    = x pos
@@ -331,7 +333,7 @@ begin
 	sm_inst : entity rt_touch_v1_00_a.spi_master
 		generic map (
 			G_SM_CLK_PRD  => 10ns,
-			G_SPI_CLK_PRD => 800ns,
+			G_SPI_CLK_PRD => 400ns,
 
 			G_DATA_LEN => 24
 		)
@@ -345,6 +347,7 @@ begin
 			SM_RxData => sm_rxdata,
 			SM_Start  => sm_start,
 			SM_Ready  => sm_ready,
+			SM_Conti  => sm_conti,
 			SM_Clk    => HWT_Clk
 		);
 
