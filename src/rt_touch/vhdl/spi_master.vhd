@@ -19,6 +19,7 @@ entity spi_master is
 		SM_RxData : out std_logic_vector(G_DATA_LEN - 1 downto 0);
 		SM_Start  : in  std_logic;
 		SM_Ready  : out std_logic;
+		SM_Conti  : in  std_logic;
 		SM_Clk    : in  std_logic
 	);
 end entity spi_master;
@@ -35,6 +36,8 @@ architecture implementation of spi_master is
 
 	signal data_count : unsigned(31 downto 0) := (others => '0');
 	signal txdata, rxdata : std_logic_vector(G_DATA_LEN - 1 downto 0);
+
+	signal conti : std_logic;
 begin
 
 	ctrl_proc : process (SM_Clk) is
@@ -45,9 +48,10 @@ begin
 					data_count <= (others => '0');
 					sclk_count <= (others => '0');
 
-					txdata <= SM_TxData;
-
 					if SM_Start = '1' then
+						txdata <= SM_TxData;
+						conti <= SM_Conti;
+						
 						state <= STATE_PROC;
 					end if;
 
@@ -87,7 +91,9 @@ begin
 
 	SPI_SCLK <= sclk;
 	SPI_MOSI <= txdata(G_DATA_LEN - 1);
-	SPI_SSn  <= '0' when state = STATE_PROC else '1';
+	SPI_SSn  <= '0' when state = STATE_PROC else
+	            '0' when conti = '1' else
+	            '1';
 
 	SM_RxData <= rxdata;
 	SM_Ready  <= '1' when state = STATE_WAIT else '0';
