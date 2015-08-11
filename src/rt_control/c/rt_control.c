@@ -7,7 +7,7 @@
 #include <math.h>
 #include <stdio.h>
 
-//#define KP -0.09
+#define KP -0.09
 //#define KI -0.00004
 #define KI 0
 #define KD -32
@@ -30,7 +30,6 @@ static float median(float *data) {
 	int i, j;
 	float tmp;
 	float copy[MC];
-	float sum = 0;
 
 	for (i = 0; i < MC; i++) {
 		copy[i] = data[i];
@@ -58,8 +57,6 @@ THREAD_ENTRY() {
 	float error_y = 0, error_y_last = 0, error_y_diff = 0, error_y_sum = 0;
 
 	float p_p_b_x_last = 0, p_p_b_y_last = 0;
-
-	float delta_off = 0;
 
 	float error_x_diff_m[MC], error_y_diff_m[MC];
 
