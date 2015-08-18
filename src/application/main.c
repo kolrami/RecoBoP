@@ -55,11 +55,38 @@ int main(int argc, char **argv) {
 	rb_info.thread_p[3] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
 	rb_info.thread_p[4] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
 	rb_info.thread_p[5] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	rb_info.thread_p[6] = reconos_thread_createi_hwt_touch((void *)&rb_info);
-	//rb_info.thread_p[7] = reconos_thread_createi_hwt_vga((void *)&rb_info);
-	//rb_info.thread_p[7] = reconos_thread_createi_swt_web((void *)&rb_info);
-	rb_info.thread_p[8] = reconos_thread_createi_swt_power((void *)&rb_info);
-	//rb_info.thread_p[9] = reconos_thread_createi_swt_saw((void *)&rb_info);
+	rb_info.thread_p[6] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	rb_info.thread_p[7] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	rb_info.thread_p[8] = reconos_thread_createi_hwt_touch((void *)&rb_info);
+	rb_info.thread_p[9] = reconos_thread_createi_swt_power((void *)&rb_info);
+	//rb_info.thread_p[10] = reconos_thread_createi_swt_saw((void *)&rb_info);
+	//rb_info.thread_p[11] = reconos_thread_createi_swt_web((void *)&rb_info);
+	//rb_info.thread_p[12] = reconos_thread_createi_hwt_vga((void *)&rb_info);
+
+
+#if 0
+	int sum = 1000;
+	float overhead;
+	double touch_sum = 0, control_sum = 0, inverse_sum = 0, overhead_sum = 0, power_sum;
+	for (i = 0; i < sum; i++) {
+		touch_sum += rbi_perf_touch(&rb_info);
+		control_sum += rbi_perf_control(&rb_info);
+		inverse_sum += rbi_perf_inverse(&rb_info);
+		power_sum += rbi_saw_power(&rb_info);
+		while ((overhead = rbi_perf_overhead(&rb_info)) > 10);
+		overhead_sum += overhead;
+		if (i % 100 == 0)
+			printf("%d\n", i);
+		usleep(20000);
+	}
+
+	printf("Evaluation:\n");
+	printf("  Touch: %f\n", touch_sum / sum);
+	printf("  Control: %f\n", control_sum / sum);
+	printf("  Inverse: %f\n", inverse_sum / sum);
+	printf("  Overhead: %f\n", overhead_sum / sum);
+	printf("  Power: %f\n", power_sum / sum);
+#endif
 
 #if 0
 	while (1) {

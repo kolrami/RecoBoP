@@ -20,9 +20,15 @@ struct recobop_info {
 	uint32_t perf_inverse;
 	uint32_t perf_all;
 
+	uint32_t ctrl_angle;
+
 	int thread_count;
 	struct reconos_thread *thread_p[16];
 };
+
+static inline float rbi_ctrl_angle(struct recobop_info *rb_info) {
+	return rb_info->ctrl_angle * 0.1;
+}
 
 static inline float rbi_saw_power(struct recobop_info *rb_info) {
 	return rb_info->saw_power;
@@ -64,6 +70,10 @@ static inline float rbi_perf_inverse(struct recobop_info *rb_info) {
 static inline float rbi_perf_overhead(struct recobop_info *rb_info) {
 	//printf("%f\n", rb_info->perf_all / 100000.0);
 	return (rb_info->perf_all - rb_info->perf_touch - rb_info->perf_control - rb_info->perf_inverse) / 100000.0;
+}
+
+static inline float rbi_ctrl_touch_wait(struct recobop_info *rb_info) {
+	return rb_info->ctrl_touch_wait / 100000.0;
 }
 
 static inline int rbi_thread_count_m(struct recobop_info *rb_info,
