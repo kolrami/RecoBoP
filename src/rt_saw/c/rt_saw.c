@@ -15,30 +15,33 @@ THREAD_ENTRY() {
 	rb_info = (struct recobop_info *)GET_INIT_DATA();
 
 	int x, y;
-	int x_diff, y_diff;
-	int x_last = 0, y_last = 0;
+	float angle;
+	int t = 0;
 
 	while (1) {
 		x = rbi_saw_pos_x(rb_info);
 		y = rbi_saw_pos_y(rb_info);
+		angle = rbi_ctrl_angle(rb_info);
 
-		x_diff = x_last - x;
-		y_diff = y_last - y;
-
-		printf("Checking %d %d %d %d...\n", abs(x), abs(y), abs(x_diff), abs(y_diff));
-
-		if (abs(x) < 30 && abs(y) < 30 && abs(x_diff) < 10 && abs(y_diff) < 10) {
-			printf("Reducing ...\n");
-			rb_info->ctrl_touch_wait = 10000000;
+		uint32_t wait = rb_info->ctrl_touch_wait;
+		if (angle <= 0.5) {
+			wait += 100000;
 		} else {
-			printf("Increasing ...\n");
-			rb_info->ctrl_touch_wait = 1000000;
+			wait /= 2;
 		}
 
-		x_last = x;
-		y_last = y;
+		if (wait < 1500000) {
+			wait = 1500000;
+		} else if (wait > 10000000) {
+			wait = 10000000;
+		}
 
-		usleep(1000000);
+		//printf("%d %f %f\n", t, wait / 100000.0, rbi_saw_power(rb_info));
+		//printf("%d %d %d %f %f\n", t, x, y, angle, wait / 100000.0);
+		rb_info->ctrl_touch_wait = wait;
+
+		usleep(rb_info->ctrl_touch_wait / 100);
+		t += rb_info->ctrl_touch_wait / 100;
 	}
 
 	THREAD_EXIT();
