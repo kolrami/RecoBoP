@@ -180,6 +180,9 @@ BEGIN reconos_proc_control
  PORT MMU_Fault_Addr = reconos_mmu_faultaddr
  PORT MMU_Retry = reconos_mmu_retry
  PORT MMU_Pgd = reconos_mmu_pgd
+ PORT IC_Sig = reconos_ic_sig
+ PORT IC_Rdy = reconos_ic_rdy
+ PORT IC_Rst = reconos_ic_rst
 END
 
 BEGIN reconos_osif_interconnect
@@ -199,6 +202,9 @@ BEGIN reconos_osif_interconnect
  PORT OSIF_Ic2Sw_Has_Data = reconos_osif_ic2sw_has_data
  PORT SYS_Clk = reconos_clk_<<SYSCLK>>
  PORT SYS_Rst = reconos_rst_sys
+ PORT IC_Sig = reconos_ic_sig
+ PORT IC_Rdy = reconos_ic_rdy
+ PORT IC_Rst = reconos_ic_rst
 END
 
 <<generate for RESOURCES(Mode == "hw")>>
