@@ -133,6 +133,8 @@ begin
 					end if;
 
 				when STATE_STORE =>
+					done := false;
+
 					case perf_cmd(31 downto 24) is
 						when C_RT_TOUCH & C_PC_BEGIN =>
 							rt_touch_begin <= perf_cnt;
@@ -167,6 +169,8 @@ begin
 								MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 28), std_logic_vector(perf_cnt - rt_inverse_begin), done);
 
 								rt_inverse_begin_leg := (others => '0');
+							else
+								done := true;
 							end if;
 
 						when C_RT_SERVO & C_PC_BEGIN =>
@@ -178,6 +182,8 @@ begin
 							if rt_servo_leg = "111111" then
 								rt_servo_end <= perf_cnt;
 								MEM_WRITE_WORD(i_memif, o_memif, std_logic_vector(rb_info + 32), std_logic_vector(perf_cnt - rt_touch_begin), done);
+							else
+								done := true;
 							end if;
 
 						when others =>
@@ -187,6 +193,8 @@ begin
 					if done then
 						state <= STATE_RECV;
 					end if;
+
+				when others =>
 			end case;
 		end if;
 	end process osfsm_proc;
