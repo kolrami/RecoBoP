@@ -47,13 +47,13 @@ architecture implementation of rt_touch is
 	signal i_memif : i_memif_t;
 	signal o_memif : o_memif_t;
 
-	constant C_AVG_COUNT     : integer := 4;
-	constant C_AVG_COUNT_LOG : integer := 2;
+	constant C_AVG_COUNT     : integer := 32;
+	constant C_AVG_COUNT_LOG : integer := 5;
 
 	type STATE_TYPE is (STATE_THREAD_INIT, STATE_INIT_DATA,
-	                    STATE_WAIT, STATE_CTRL, STATE_IRQ_START, STATE_IRQ_END,
-	                    STATE_START_X, STATE_READ_X, STATE_AVG_X,
-	                    STATE_START_Y, STATE_READ_Y, STATE_AVG_Y,
+	                    STATE_WAIT, STATE_CTRL, STATE_IRQ_START, STATE_IRQ_END, STATE_IRQ_MIDDLE,
+	                    STATE_START_X_0, STATE_START_X_1, STATE_READ_X_0, STATE_READ_X_1, STATE_READ_X_2, STATE_CHK_X, STATE_AVG_X,
+	                    STATE_START_Y_0, STATE_START_Y_1, STATE_READ_Y_0, STATE_READ_Y_1, STATE_READ_Y_2, STATE_CHK_Y, STATE_AVG_Y,
 	                    STATE_POS, STATE_SCALE,
 	                    STATE_STORE_POS, STATE_STORE_DELTA,
 	                    STATE_SAW, STATE_PERF_BEGIN, STATE_PERF_END);
@@ -64,13 +64,14 @@ architecture implementation of rt_touch is
 	signal rb_info : unsigned(31 downto 0);
 
 	signal sm_start, sm_ready, sm_conti : std_logic;
-	signal sm_txdata, sm_rxdata         : std_logic_vector(23 downto 0);
+	signal sm_txdata, sm_rxdata         : std_logic_vector(7 downto 0);
 	
 	signal wait_count : unsigned(23 downto 0);
-	signal irq_count  : unsigned(23 downto 0);
 
-	signal x_pos_sum, y_pos_sum : unsigned(11 + C_AVG_COUNT_LOG downto 0);
-	signal pos_sum_count        : unsigned(C_AVG_COUNT_LOG downto 0);
+	signal x_pos, y_pos           : unsigned(11 downto 0);
+	signal x_pos_last, y_pos_last : unsigned(11 downto 0);
+	signal x_pos_sum, y_pos_sum   : unsigned(11 + C_AVG_COUNT_LOG downto 0);
+	signal pos_sum_count          : unsigned(C_AVG_COUNT_LOG downto 0);
 
 	signal x_pos_avg, y_pos_avg : std_logic_vector(11 downto 0);
 	signal x_pos_s, y_pos_s     : std_logic_vector(11 downto 0);
@@ -160,9 +161,6 @@ begin
 						ctrl_wait <= unsigned(ret(23 downto 0));
 						ctrl_avg  <= ret(27 downto 24);
 
-						x_pos_sum <= (others => '0');
-						y_pos_sum <= (others => '0');
-
 						state <= STATE_WAIT;
 					end if;
 
@@ -176,79 +174,188 @@ begin
 
 					MBOX_PUT(i_osif, o_osif, performance_perf, x"00000000", ignore, done);
 					if done then
-						irq_count <= (others => '0');
 						state <= STATE_IRQ_START;
 					end if;
 
 				when STATE_IRQ_START =>
 					ctrl_wait <= ctrl_wait + 1;
 
+					x_pos_sum     <= (others => '0');
+					pos_sum_count <= (others => '0');
+
 					if irq_s_0 = '0' then
-						irq_count <= irq_count + 1;
-					else
-						irq_count <= (others => '0');
+						state <= STATE_START_X_0;
 					end if;
 
-					if irq_count = 9999 then
-						state <= STATE_START_X;
-					end if;
-
-				when STATE_START_X =>
+				when STATE_START_X_0 =>
 					ctrl_wait <= ctrl_wait + 1;
 
-					state <= STATE_READ_X;
+					state <= STATE_READ_X_0;
 
-				when STATE_READ_X =>
+				when STATE_START_X_1 =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					state <= STATE_READ_X_1;
+
+				when STATE_READ_X_0 =>
 					ctrl_wait <= ctrl_wait + 1;
 
 					if sm_ready = '1' then
-						if pos_sum_count /= 0 then
-							x_pos_sum <= x_pos_sum + unsigned(sm_rxdata(14 downto 3));
-						end if;
+						state <= STATE_READ_X_1;
+					end if;
 
-						state <= STATE_AVG_X;
+				when STATE_READ_X_1 =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					if sm_ready = '1' then
+						x_pos(11 downto 5) <= unsigned(sm_rxdata(6 downto 0));
+
+						state <= STATE_READ_X_2;
+					end if;
+
+				when STATE_READ_X_2 =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					if sm_ready = '1' then
+						x_pos(4 downto 0) <= unsigned(sm_rxdata(7 downto 3));
+
+						pos_sum_count <= pos_sum_count + 1;
+						if pos_sum_count = 0 then
+							state <= STATE_START_X_1;
+						elsif pos_sum_count = C_AVG_COUNT + 1 then
+							state <= STATE_IRQ_MIDDLE;
+						elsif pos_sum_count = 1 then
+							state <= STATE_AVG_X;
+						else
+							state <= STATE_CHK_X;
+						end if;
+					end if;
+
+				when STATE_CHK_X =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					if x_pos_last > x_pos then
+						if (x_pos_last - x_pos) > 8 then
+							x_pos_sum     <= (others => '0');
+							pos_sum_count <= (others => '0');
+
+							state <= STATE_START_X_1;
+						else
+							state <= STATE_AVG_X;
+						end if;
+					else
+						if (x_pos - x_pos_last) > 8 then
+							x_pos_sum     <= (others => '0');
+							pos_sum_count <= (others => '0');
+
+							state <= STATE_START_X_1;
+						else
+							state <= STATE_AVG_X;
+						end if;
 					end if;
 
 				when STATE_AVG_X =>
 					ctrl_wait <= ctrl_wait + 1;
 
-					pos_sum_count <= pos_sum_count + 1;
+					x_pos_last <= x_pos;
+					x_pos_sum <= x_pos_sum + x_pos;
 
-					if pos_sum_count = C_AVG_COUNT then
-						pos_sum_count <= (others => '0');
-						state <= STATE_START_Y;
+					state <= STATE_START_X_1;
+
+				when STATE_IRQ_MIDDLE =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					y_pos_sum     <= (others => '0');
+					pos_sum_count <= (others => '0');
+
+					if irq_s_0 = '0' then
+						state <= STATE_START_Y_0;
 					else
-						state <= STATE_START_X;
+						state <= STATE_IRQ_START;
 					end if;
 
-				when STATE_START_Y =>
-					state <= STATE_READ_Y;
+				when STATE_START_Y_0 =>
+					ctrl_wait <= ctrl_wait + 1;
 
-				when STATE_READ_Y =>
+					state <= STATE_READ_Y_0;
+
+				when STATE_START_Y_1 =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					state <= STATE_READ_Y_1;
+
+				when STATE_READ_Y_0 =>
+					ctrl_wait <= ctrl_wait + 1;
+
 					if sm_ready = '1' then
-						if pos_sum_count /= 0 then
-							y_pos_sum <= y_pos_sum + unsigned(sm_rxdata(14 downto 3));
-						end if;
+						state <= STATE_READ_Y_1;
+					end if;
 
-						state <= STATE_AVG_Y;
+				when STATE_READ_Y_1 =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					if sm_ready = '1' then
+						y_pos(11 downto 5) <= unsigned(sm_rxdata(6 downto 0));
+
+						state <= STATE_READ_Y_2;
+					end if;
+
+				when STATE_READ_Y_2 =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					if sm_ready = '1' then
+						y_pos(4 downto 0) <= unsigned(sm_rxdata(7 downto 3));
+
+						pos_sum_count <= pos_sum_count + 1;
+						if pos_sum_count = 0 then
+							state <= STATE_START_Y_1;
+						elsif pos_sum_count = C_AVG_COUNT + 1 then
+							state <= STATE_IRQ_END;
+						elsif pos_sum_count = 1 then
+							state <= STATE_AVG_Y;
+						else
+							state <= STATE_CHK_Y;
+						end if;
+					end if;
+
+				when STATE_CHK_Y =>
+					ctrl_wait <= ctrl_wait + 1;
+
+					if y_pos_last > y_pos then
+						if (y_pos_last - y_pos) > 8 then
+							y_pos_sum     <= (others => '0');
+							pos_sum_count <= (others => '0');
+
+							state <= STATE_START_Y_1;
+						else
+							state <= STATE_AVG_Y;
+						end if;
+					else
+						if (y_pos - y_pos_last) > 8 then
+							y_pos_sum     <= (others => '0');
+							pos_sum_count <= (others => '0');
+
+							state <= STATE_START_Y_1;
+						else
+							state <= STATE_AVG_Y;
+						end if;
 					end if;
 
 				when STATE_AVG_Y =>
-					pos_sum_count <= pos_sum_count + 1;
+					ctrl_wait <= ctrl_wait + 1;
 
-					if pos_sum_count = C_AVG_COUNT then
-						pos_sum_count <= (others => '0');
-						state <= STATE_IRQ_END;
-					else
-						state <= STATE_START_Y;
-					end if;
+					y_pos_last <= y_pos;
+					y_pos_sum <= y_pos_sum + y_pos;
+
+					state <= STATE_START_Y_1;
 
 				when STATE_IRQ_END =>
+					ctrl_wait <= ctrl_wait + 1;
+
 					if irq_s_0 = '0' then
 						state <= STATE_SCALE;
 						wait_count <= (others => '0');
 					else
-						irq_count <= (others => '0');
 						state <= STATE_IRQ_START;
 					end if;
 
@@ -308,11 +415,20 @@ begin
 		end if;
 	end process sync_proc;
 
-	sm_start <= '1' when state = STATE_START_X else
-	            '1' when state = STATE_START_Y else
+	sm_start <= '1' when state = STATE_START_X_0 else
+	            '1' when state = STATE_START_X_1 else
+	            '1' when state = STATE_READ_X_0 else
+	            '1' when state = STATE_READ_X_1 else
+	            '1' when state = STATE_START_Y_0 else
+	            '1' when state = STATE_START_Y_1 else
+	            '1' when state = STATE_READ_Y_0 else
+	            '1' when state = STATE_READ_Y_1 else
 	            '0';
-	sm_conti <= '0' when pos_sum_count = C_AVG_COUNT else
+
+	sm_conti <= '0' when state = STATE_READ_X_1 and pos_sum_count = C_AVG_COUNT + 1 else
+				'0' when state = STATE_READ_Y_1 and pos_sum_count = C_AVG_COUNT + 1 else
 	            '1';
+
 	-- Start A2 A1 A0 Mode SER PD1 PD0
 	--       0  0  1                    = y pos
 	--       1  0  1                    = x pos
@@ -324,10 +440,10 @@ begin
 	--                         0   1    = power down without penirq
 	--                         1   0    = reserved
 	--                         1   1    = no power down
-	sm_txdata <= "11010000" & x"00" & "00000000" when state = STATE_START_X and pos_sum_count = C_AVG_COUNT else
-	             "11010000" & x"00" & "11010000" when state = STATE_START_X else
-	             "10010000" & x"00" & "00000000" when state = STATE_START_Y and pos_sum_count = C_AVG_COUNT else
-	             "10010000" & x"00" & "10010000" when state = STATE_START_Y else
+	sm_txdata <= "11010000" when state = STATE_START_X_0 else
+	             "11010000" when state = STATE_READ_X_1 and pos_sum_count /= C_AVG_COUNT + 1 else
+	             "10010000" when state = STATE_START_Y_0 else
+	             "10010000" when state = STATE_READ_Y_1 and pos_sum_count /= C_AVG_COUNT + 1 else
 	             (others => '0');
 
 	sm_inst : entity rt_touch_v1_00_a.spi_master
@@ -335,7 +451,7 @@ begin
 			G_SM_CLK_PRD  => 10ns,
 			G_SPI_CLK_PRD => 400ns,
 
-			G_DATA_LEN => 24
+			G_DATA_LEN => 8
 		)
 		port map (
 			SPI_SCLK => TC_SCLK,
