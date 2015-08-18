@@ -30,6 +30,8 @@ h1 {font-weight: 100; }
 <svg id="perf" />
 <input type="button" value="Stop Hw Inverse" onclick="javascript:post('/thread/inverse/hw/stop')"/>
 <input type="button" value="Start Hw Inverse" onclick="javascript:post('/thread/inverse/hw/start')"/>
+<input type="button" value="Touch wait +1ms" onclick="javascript:post('/ctrl/touch/wait/inc')"/>
+<input type="button" value="Touch wait -1ms" onclick="javascript:post('/ctrl/touch/wait/dec')"/>
 
 <script type="text/javascript">
 function getTime() {
@@ -205,7 +207,10 @@ function perf_update() {
 	request.open("GET", "/perf/overhead", false);
 	request.send(null);
 	if (request.status === 200) {
-		perf_data_overhead.tm = parseFloat(request.responseText);
+		var tm = parseFloat(request.responseText);
+		if (tm < 10) {
+			perf_data_overhead.tm = parseFloat(request.responseText);
+		}
 		perf_data_overhead.off = perf_data_inverse.off + perf_data_inverse.tm;
 	} else {
 		return;

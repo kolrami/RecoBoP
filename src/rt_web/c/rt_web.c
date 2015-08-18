@@ -167,6 +167,16 @@ THREAD_ENTRY() {
 			int rti = rbi_thread_index_free(rb_info);
 			rb_info->thread_p[rti] = reconos_thread_createi_hwt_inverse((void *)rb_info);
 			send(client_sock, "\n", 1, 0);
+		} else if (!strncmp(header, "GET /ctrl/touch/wait ", 21)) {
+			send(client_sock, "Content-Type: text/plain\n\n", 26, 0);
+			buf_count = snprintf(buf, 1024, "%f", rbi_ctrl_touch_wait(rb_info));
+			send(client_sock, buf, buf_count, 0);
+		} else if  (!strncmp(header, "PUT /ctrl/touch/wait/inc ", 25)) {
+			rb_info->ctrl_touch_wait += 100000;
+			send(client_sock, "\n", 1, 0);
+		} else if  (!strncmp(header, "PUT /ctrl/touch/wait/dec ", 25)) {
+			rb_info->ctrl_touch_wait -= 100000;
+			send(client_sock, "\n", 1, 0);
 		}
 
 		close(client_sock);
