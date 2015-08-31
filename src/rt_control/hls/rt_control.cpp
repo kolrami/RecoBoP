@@ -5,7 +5,7 @@
 
 #include "ap_int.h"
 #include "ap_fixed.h"
-#include "math.h"
+#include "hls_math.h"
 
 #define KP -0.3
 //#define KI -0.00004
@@ -61,7 +61,7 @@ THREAD_ENTRY() {
 			p_p_b_y[i] = pos_y[i];
 		}
 
-		ap_fixed<22,12> delta = wait / ap_fixed<22,12>(100000);
+		ap_fixed<22,12> delta = ap_fixed<42,32>(wait) / 100000;
 		int mc = -(int)delta / 6 + 17;
 
 #ifndef __SYNTHESIS__
@@ -74,7 +74,8 @@ THREAD_ENTRY() {
 
 
 		// implement PID controller for x
-		error_x_diff = (p_p_b_x - p_p_b_x_last) / delta;
+		error_x_diff = p_p_b_x - p_p_b_x_last;
+		error_x_diff /= delta;
 		error_x_sum += error_x * delta;
 
 		for (int i = MC - 1; i > 0; i--) {
@@ -90,7 +91,8 @@ THREAD_ENTRY() {
 
 
 		// implement PID controller for y
-		error_y_diff = (p_p_b_y - p_p_b_y_last) / delta;
+		error_y_diff = p_p_b_y - p_p_b_y_last;
+		error_y_diff /= delta;
 		error_y_sum += error_y * delta;
 
 		for (int i = MC - 1; i > 0; i--) {
@@ -111,7 +113,7 @@ THREAD_ENTRY() {
 
 
 		// calculate plate rotation
-		ap_ufixed<22,12> len = sqrt(ctrl_x * ctrl_x + ctrl_y * ctrl_y);
+		ap_ufixed<22,12> len = hls::sqrt(ap_ufixed<22,12>(ctrl_x * ctrl_x + ctrl_y * ctrl_y));
 
 		ap_fixed<10,2> t_p2b_ra_x = -ctrl_y / len;
 		ap_fixed<10,2> t_p2b_ra_y = ctrl_x / len;

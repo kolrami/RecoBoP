@@ -59,11 +59,10 @@ THREAD_ENTRY() {
 
 		float delta = wait / 100000.0;
 		int mc = -(int)delta / 6 + 17;
-		mc = 4;
 
 		debug("position of ball on plate %d %d", p_p_b_x, p_p_b_y);
 		//printf("position of ball on plate %d %d (%f)\n", p_p_b_x, p_p_b_y, delta);
-		printf("%d %d %f %f\n", p_p_b_x, p_p_b_y, (16*sin(dd) * sin(dd) * sin(dd)) * 38, (13*cos(dd) - 5*cos(2*dd) - 2*cos(3*dd) - cos(4*dd)) * 38);
+		//printf("%d %d %f %f\n", p_p_b_x, p_p_b_y, (16*sin(dd) * sin(dd) * sin(dd)) * 38, (13*cos(dd) - 5*cos(2*dd) - 2*cos(3*dd) - cos(4*dd)) * 38);
 
 #if 1
 		dd += 0.01;
