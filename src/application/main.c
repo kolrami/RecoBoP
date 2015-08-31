@@ -53,14 +53,14 @@ int main(int argc, char **argv) {
 	rb_info.thread_p[1] = reconos_thread_createi_hwt_servo((void *)&rb_info);
 	rb_info.thread_p[2] = reconos_thread_createi_swt_control((void *)&rb_info);
 	rb_info.thread_p[3] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	rb_info.thread_p[4] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	rb_info.thread_p[5] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	rb_info.thread_p[6] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
-	rb_info.thread_p[7] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	//rb_info.thread_p[4] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	//rb_info.thread_p[5] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	//rb_info.thread_p[6] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
+	//rb_info.thread_p[7] = reconos_thread_createi_hwt_inverse((void *)&rb_info);
 	rb_info.thread_p[8] = reconos_thread_createi_hwt_touch((void *)&rb_info);
 	rb_info.thread_p[9] = reconos_thread_createi_swt_power((void *)&rb_info);
-	//rb_info.thread_p[10] = reconos_thread_createi_swt_saw((void *)&rb_info);
-	//rb_info.thread_p[11] = reconos_thread_createi_swt_web((void *)&rb_info);
+	rb_info.thread_p[10] = reconos_thread_createi_swt_saw((void *)&rb_info);
+	rb_info.thread_p[11] = reconos_thread_createi_swt_web((void *)&rb_info);
 	//rb_info.thread_p[12] = reconos_thread_createi_hwt_vga((void *)&rb_info);
 
 

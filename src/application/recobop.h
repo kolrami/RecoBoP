@@ -121,6 +121,12 @@ static inline int rbi_thread_index(struct recobop_info *rb_info,
 			&& thread_mode == RECONOS_THREAD_MODE_HW) {
 			return i;
 		}
+
+		if (   strcmp(thread_name, rt->name) == 0 
+			&& rt->state == RECONOS_THREAD_STATE_RUNNING_SW
+			&& thread_mode == RECONOS_THREAD_MODE_SW) {
+			return i;
+		}
 	}
 
 	return -1;
