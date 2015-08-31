@@ -153,6 +153,16 @@ THREAD_ENTRY() {
 			send(client_sock, "Content-Type: text/plain\n\n", 26, 0);
 			buf_count = snprintf(buf, 1024, "%d", rbi_thread_count_m(rb_info, "servo", RECONOS_THREAD_MODE_SW));
 			send(client_sock, buf, buf_count, 0);
+		} else if  (!strncmp(header, "PUT /thread/inverse/sw/stop ", 28)) {
+			int rti = rbi_thread_index(rb_info, "inverse", RECONOS_THREAD_MODE_SW);
+			reconos_thread_signal(rb_info->thread_p[rti]);
+			reconos_thread_join(rb_info->thread_p[rti]);
+			rb_info->thread_p[rti] = NULL;
+			send(client_sock, "\n", 1, 0);
+		} else if  (!strncmp(header, "PUT /thread/inverse/sw/start ", 29)) {
+			int rti = rbi_thread_index_free(rb_info);
+			rb_info->thread_p[rti] = reconos_thread_createi_swt_inverse((void *)rb_info);
+			send(client_sock, "\n", 1, 0);
 		} else if (!strncmp(header, "GET /thread/servo/hw/count ", 27)) {
 			send(client_sock, "Content-Type: text/plain\n\n", 26, 0);
 			buf_count = snprintf(buf, 1024, "%d", rbi_thread_count_m(rb_info, "servo", RECONOS_THREAD_MODE_HW));

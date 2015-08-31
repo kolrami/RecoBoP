@@ -30,6 +30,8 @@ h1 {font-weight: 100; }
 <svg id="perf" />
 <input type="button" value="Stop Hw Inverse" onclick="javascript:post('/thread/inverse/hw/stop')"/>
 <input type="button" value="Start Hw Inverse" onclick="javascript:post('/thread/inverse/hw/start')"/>
+<input type="button" value="Stop Sw Inverse" onclick="javascript:post('/thread/inverse/sw/stop')"/>
+<input type="button" value="Start Sw Inverse" onclick="javascript:post('/thread/inverse/sw/start')"/>
 <input type="button" value="Touch wait +1ms" onclick="javascript:post('/ctrl/touch/wait/inc')"/>
 <input type="button" value="Touch wait -1ms" onclick="javascript:post('/ctrl/touch/wait/dec')"/>
 
@@ -235,7 +237,7 @@ function perf_init() {
 	d3.select("#perf").select(".graph").append("rect").attr("id", "overhead").attr("width", perf_width - 2 * perf_padding);
 
 	perf_axis_scale = d3.scale.linear();
-	perf_axis_scale.domain([2, 0]);
+	perf_axis_scale.domain([16, 0]);
 	perf_axis_scale.range([0, perf_height - 2 * perf_padding]);
 
 	var yaxis = d3.svg.axis().orient("left").scale(perf_axis_scale);
